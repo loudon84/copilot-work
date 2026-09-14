@@ -1,0 +1,1383 @@
+/**
+ * Skill Run Service (Main Process Lifecycle Owner).
+ * Owns active runs, SSE stream consumption, polling fallback, terminal state lock, and continuation.
+ * Enforces fail-closed gate when consumer lock is missing.
+ */
+
+import { randomUUID } from "crypto";
+import { readFile } from "fs/promises";
+import { parseRunSseBlock } from "../run-stream";
+import { getManagedFile as lookupManagedFile } from "../files/file-association-store";
+import type { ManagedFile } from "../../shared/files";
+import {
+  createSkillRunGatewayClient,
+  SkillRunGatewayClient,
+  SkillRunGatewayError,
+} from "./skill-run-gateway-client";
+import {
+  bindPromptFirstTool,
+  parseSkillRunEvent,
+  parseSkillRunStatusToPhase,
+} from "./skill-run-contract-parser";
+import { getSkillRunFeatureMode } from "./feature-mode-store";
+import {
+  createSkillRunCatalogPreferenceStore,
+  type SkillRunCatalogPreferenceStore,
+} from "./skill-run-catalog-preference-store";
+import {
+  fingerprintRequestId,
+  recordSkillRunTelemetry,
+  type SkillRunTelemetryEvent,
+} from "./skill-run-telemetry";
+import {
+  isSkillRunTerminalPhase,
+  type SkillCatalogResponse,
+  type SkillRunActivityItem,
+  type SkillRunActivityKind,
+  type SkillRunArtifactDescriptor,
+  type SkillRunCancelInput,
+  type SkillRunCancelResult,
+  type SkillRunDecideApprovalInput,
+  type SkillRunDecideApprovalResult,
+  type SkillRunFeatureMode,
+  type SkillRunLocalPhase,
+  type SkillRunProjection,
+  type SkillRunRetryArtifactDiscoveryInput,
+  type SkillRunSetCatalogFavoriteInput,
+  type SkillRunStartInput,
+  type SkillRunStartResult,
+  type SkillRunToolCallStatus,
+} from "../../shared/skill-run";
+import type { SkillRunSessionLockResult } from "./skill-run-session-mode-store";
+
+const ACTIVITY_LIST_CAP = 32;
+
+function currentWaitingApprovalId(
+  projection: SkillRunProjection,
+): string | undefined {
+  const activities = projection.activities ?? [];
+  for (let i = activities.length - 1; i >= 0; i -= 1) {
+    const item = activities[i];
+    if (item.kind === "approval.requested" && item.approvalId) {
+      return item.approvalId;
+    }
+  }
+  return undefined;
+}
+
+function requestedStartFileIds(input: SkillRunStartInput): string[] {
+  return (input.fileIds ?? []).map((id) => id.trim()).filter(Boolean);
+}
+
+function isIneligibleManagedFile(file: ManagedFile): boolean {
+  return file.locality === "remote" || Boolean(file.remoteArtifactId);
+}
+
+function sanitizeStartFailure(err: unknown): {
+  errorCode: string;
+  errorMessage: string;
+} {
+  if (err instanceof SkillRunGatewayError) {
+    const errorCode = err.errorCode?.trim() || "START_FAILED";
+    if (errorCode.startsWith("ATTACHMENT_")) {
+      return {
+        errorCode,
+        errorMessage: "Skill attachment request was not accepted",
+      };
+    }
+    return {
+      errorCode,
+      errorMessage: err.message,
+    };
+  }
+  return {
+    errorCode: "START_FAILED",
+    errorMessage:
+      err instanceof Error ? err.message : "Skill execution start failed",
+  };
+}
+
+function sanitizeDecisionFailure(err: unknown): {
+  errorCode: string;
+  errorMessage: string;
+} {
+  if (err instanceof SkillRunGatewayError) {
+    const errorCode = err.errorCode?.trim() || "APPROVAL_DECISION_FAILED";
+    return {
+      errorCode,
+      errorMessage: "Approval decision was not accepted",
+    };
+  }
+  return {
+    errorCode: "APPROVAL_DECISION_FAILED",
+    errorMessage: "Approval decision was not accepted",
+  };
+}
+
+function appendSanitizedActivity(
+  existing: SkillRunActivityItem[] | undefined,
+  item: SkillRunActivityItem,
+): SkillRunActivityItem[] {
+  const current = existing ?? [];
+  if (current.some((entry) => entry.eventId === item.eventId)) {
+    return current;
+  }
+  const next = [...current, item];
+  if (next.length <= ACTIVITY_LIST_CAP) {
+    return next;
+  }
+  return next.slice(next.length - ACTIVITY_LIST_CAP);
+}
+
+/** Main-only durable run snapshot. Never sent to Renderer / Preload / telemetry. */
+export interface SkillRunDurableRunSnapshot {
+  clientRequestId: string;
+  sessionId: string;
+  profileId: string;
+  toolName: string;
+  prompt: string;
+  providerRunId: string | null;
+  phase: SkillRunLocalPhase;
+  displayStage: string;
+  lastEventId: string | null;
+  eventSeq: number;
+  text?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  artifacts?: SkillRunArtifactDescriptor[];
+  createdAt: string;
+  updatedAt: string;
+  auditComplete: boolean;
+}
+
+/** Main-only durable activity record. Never sent to Renderer / Preload / telemetry. */
+export interface SkillRunDurableActivityRecord {
+  clientRequestId: string;
+  sessionId: string;
+  eventId: string;
+  kind: SkillRunActivityKind;
+  ordinal: number;
+  summary?: string;
+  toolName?: string;
+  callId?: string;
+  status?: SkillRunToolCallStatus;
+  question?: string;
+  options?: string[];
+  approvalId?: string;
+}
+
+export type SkillRunDurableRunWriter = (
+  snapshot: SkillRunDurableRunSnapshot,
+) => void | Promise<void>;
+
+export type SkillRunDurableActivityWriter = (
+  record: SkillRunDurableActivityRecord,
+) => void | Promise<void>;
+
+export type SkillRunProjectionListener = (projection: SkillRunProjection) => void;
+
+export interface SkillRunService {
+  listCatalog(): Promise<SkillCatalogResponse>;
+  refreshCatalog(): Promise<SkillCatalogResponse>;
+  setCatalogFavorite(input: SkillRunSetCatalogFavoriteInput): Promise<SkillCatalogResponse>;
+  start(input: SkillRunStartInput): Promise<SkillRunStartResult>;
+  cancel(input: SkillRunCancelInput): Promise<SkillRunCancelResult>;
+  decideApproval(input: SkillRunDecideApprovalInput): Promise<SkillRunDecideApprovalResult>;
+  getProjection(clientRequestId: string): SkillRunProjection | null;
+  listProjections(sessionId: string): SkillRunProjection[];
+  rehydrate(item: {
+    clientRequestId: string;
+    providerRunId: string | null;
+    toolName: string;
+    promptSummary: string;
+    sessionId: string;
+    profileId: string;
+    authGeneration?: string;
+    lastEventId: string | null;
+    phase: SkillRunLocalPhase;
+    text?: string;
+    errorCode?: string;
+    errorMessage?: string;
+    updatedAt: string;
+  }): Promise<SkillRunProjection | null>;
+  retryArtifactDiscovery(
+    input: SkillRunRetryArtifactDiscoveryInput,
+  ): Promise<SkillRunProjection | null>;
+  getFeatureMode(): SkillRunFeatureMode;
+  subscribe(listener: SkillRunProjectionListener): () => void;
+  dispose(): void;
+}
+
+interface ActiveRun {
+  request: SkillRunStartInput;
+  projection: SkillRunProjection;
+  promptField: string;
+  callArguments: Record<string, unknown>;
+  abort: AbortController;
+  pollTimer: NodeJS.Timeout | null;
+  terminalConfirmed: boolean;
+  successfulTerminal?: Promise<void>;
+  seenEventIds: Set<string>;
+  approvalDecisionKeys: Map<string, string>;
+  nextDurableOrdinal: number;
+  persistedActivityEventIds: Set<string>;
+  persistenceGap: boolean;
+  deltaBuffers: Map<string, { text: string; nextSeq: number; sealed: boolean }>;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function defaultDisplayStage(phase: SkillRunLocalPhase): string {
+  switch (phase) {
+    case "pending-submit":
+      return "Submitting skill request...";
+    case "starting":
+      return "Starting skill...";
+    case "running":
+      return "Executing skill...";
+    case "waiting-approval":
+      return "Waiting for approval...";
+    case "discovering-artifacts":
+      return "Discovering output artifacts...";
+    case "succeeded":
+      return "Skill completed successfully";
+    case "failed":
+      return "Skill execution failed";
+    case "cancelled":
+      return "Skill execution cancelled";
+    case "expired":
+      return "Skill execution expired";
+    case "unauthorized":
+      return "Unauthorized skill request";
+    default:
+      return "Processing...";
+  }
+}
+
+export interface CreateSkillRunServiceOptions {
+  gatewayClient?: SkillRunGatewayClient;
+  catalogPreferenceStore?: SkillRunCatalogPreferenceStore;
+  sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  getFeatureMode?: () => SkillRunFeatureMode;
+  onPersistContinuation?: (projection: SkillRunProjection) => void;
+  onUpsertArtifact?: (input: {
+    meta: SkillRunArtifactDescriptor;
+    runId: string;
+    sessionId: string;
+    profileId?: string;
+    clientRequestId: string;
+  }) => Promise<void>;
+  recordTelemetry?: (event: SkillRunTelemetryEvent) => void;
+  getManagedFile?: (profileId: string, fileId: string) => ManagedFile | null;
+  readManagedFileBytes?: (managedPath: string) => Promise<Uint8Array>;
+  onPersistSanitizedRun?: SkillRunDurableRunWriter;
+  onPersistSanitizedActivity?: SkillRunDurableActivityWriter;
+  lockSessionTool?: (sessionId: string, snapshot: {
+    executionMode: "skill-run";
+    toolName: string;
+    toolTitle: string;
+    updatedAt: string;
+  }) => SkillRunSessionLockResult | null;
+}
+
+export function createSkillRunService(
+  options: CreateSkillRunServiceOptions = {},
+): SkillRunService {
+  const gateway = options.gatewayClient ?? createSkillRunGatewayClient();
+  const preferences =
+    options.catalogPreferenceStore ?? createSkillRunCatalogPreferenceStore();
+  const getMode = options.getFeatureMode ?? getSkillRunFeatureMode;
+  const persistContinuation = options.onPersistContinuation;
+  const persistSanitizedRun = options.onPersistSanitizedRun;
+  const persistSanitizedActivity = options.onPersistSanitizedActivity;
+  const recordTelemetry = options.recordTelemetry ?? recordSkillRunTelemetry;
+  const resolveManagedFile = options.getManagedFile ?? lookupManagedFile;
+  const readManagedBytes =
+    options.readManagedFileBytes ??
+    (async (managedPath: string) => new Uint8Array(await readFile(managedPath)));
+  const sleep =
+    options.sleep ??
+    ((ms, signal) =>
+      new Promise<void>((resolve, reject) => {
+        if (signal.aborted) {
+          reject(new DOMException("Aborted", "AbortError"));
+          return;
+        }
+        const timer = setTimeout(() => resolve(), ms);
+        const onAbort = () => {
+          clearTimeout(timer);
+          reject(new DOMException("Aborted", "AbortError"));
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+      }));
+
+  const runs = new Map<string, ActiveRun>();
+  const listeners = new Set<SkillRunProjectionListener>();
+  let disposed = false;
+
+  function emit(projection: SkillRunProjection): void {
+    for (const listener of listeners) {
+      try {
+        listener(projection);
+      } catch (err) {
+        console.warn("[skill-run] listener error", err);
+      }
+    }
+  }
+
+  function updateProjection(
+    run: ActiveRun,
+    patch: Partial<SkillRunProjection>,
+  ): SkillRunProjection {
+    if (run.terminalConfirmed && patch.phase && !isSkillRunTerminalPhase(patch.phase)) {
+      return run.projection;
+    }
+
+    const preserveText =
+      typeof run.projection.text === "string" && run.projection.text.trim().length > 0 &&
+      (patch.text === undefined || (typeof patch.text === "string" && patch.text.trim().length === 0));
+    const next: SkillRunProjection = {
+      ...run.projection,
+      ...patch,
+      ...(preserveText ? { text: run.projection.text } : {}),
+      displayStage:
+        patch.displayStage ??
+        (patch.phase ? defaultDisplayStage(patch.phase) : run.projection.displayStage),
+      updatedAt: nowIso(),
+    };
+    run.projection = next;
+
+    emit(next);
+    persistRunSnapshot(run);
+    return next;
+  }
+
+  function finalizeTerminal(
+    run: ActiveRun,
+    patch: Partial<SkillRunProjection>,
+  ): SkillRunProjection {
+    if (run.terminalConfirmed) return run.projection;
+    run.terminalConfirmed = true;
+    const next = updateProjection(run, patch);
+    if (!run.abort.signal.aborted) {
+      run.abort.abort();
+    }
+    if (run.pollTimer) {
+      clearTimeout(run.pollTimer);
+      run.pollTimer = null;
+    }
+    return next;
+  }
+
+  // @lat: [[skill-run#M6j Session UX and terminal Result closure]]
+  function resolveSuccessfulTerminal(
+    run: ActiveRun,
+    runId: string,
+    hints: Partial<SkillRunProjection> = {},
+  ): Promise<void> {
+    if (run.successfulTerminal) return run.successfulTerminal;
+    run.successfulTerminal = (async () => {
+      if (run.terminalConfirmed || disposed) return;
+      let text: string | undefined;
+      let errorCode: string | undefined;
+      let errorMessage: string | undefined;
+      try {
+        if (!gateway.getRunResult) {
+          throw new Error("Skill Run Result endpoint is unavailable");
+        }
+        const result = await gateway.getRunResult(runId);
+        if (typeof result.text === "string" && result.text.trim()) {
+          text = result.text;
+        }
+      } catch {
+        errorCode = "RESULT_RETRIEVAL_FAILED";
+        errorMessage = "Result is temporarily unavailable";
+      }
+      if (run.terminalConfirmed || disposed) return;
+      text ??= hints.text?.trim() ? hints.text : run.projection.text;
+      finalizeTerminal(run, {
+        ...hints,
+        providerRunId: runId,
+        phase: "succeeded",
+        ...(text !== undefined ? { text } : {}),
+        ...(errorCode
+          ? { errorCode, errorMessage }
+          : { errorCode: undefined, errorMessage: undefined }),
+      });
+      emitTelemetry({
+        event: "terminal",
+        outcome: "ok",
+        phase: "succeeded",
+        ...(errorCode ? { errorCode } : {}),
+        requestFingerprint: fingerprintRequestId(run.request.clientRequestId),
+      });
+      await discoverArtifacts(run, runId);
+    })();
+    return run.successfulTerminal;
+  }
+
+  function persistRunSnapshot(run: ActiveRun): void {
+    if (!persistSanitizedRun) {
+      return;
+    }
+    const snapshot: SkillRunDurableRunSnapshot = {
+      clientRequestId: run.request.clientRequestId,
+      sessionId: run.request.sessionId,
+      profileId: run.request.profileId,
+      toolName: run.projection.toolName,
+      prompt: run.request.prompt,
+      providerRunId: run.projection.providerRunId,
+      phase: run.projection.phase,
+      displayStage: run.projection.displayStage,
+      lastEventId: run.projection.lastEventId,
+      eventSeq: run.projection.eventSeq,
+      text: run.projection.text,
+      errorCode: run.projection.errorCode,
+      errorMessage: run.projection.errorMessage,
+      artifacts: run.projection.artifacts,
+      createdAt: run.projection.createdAt,
+      updatedAt: run.projection.updatedAt,
+      auditComplete: !run.persistenceGap,
+    };
+    try {
+      const result = persistSanitizedRun(snapshot);
+      if (result && typeof result.then === "function") {
+        void result.catch(() => {
+          markPersistenceGap(run, "run", run.request.clientRequestId);
+        });
+      }
+    } catch {
+      markPersistenceGap(run, "run", run.request.clientRequestId);
+    }
+  }
+
+  function markPersistenceGap(
+    run: ActiveRun,
+    kind: "run" | "activity",
+    id: string,
+  ): void {
+    run.persistenceGap = true;
+    console.warn("[skill-run] durable persist failed", {
+      clientRequestId: run.request.clientRequestId,
+      kind,
+      id,
+      outcome: "error",
+    });
+  }
+
+  async function persistActivityBeforeCap(
+    run: ActiveRun,
+    item: SkillRunActivityItem,
+  ): Promise<SkillRunActivityItem[] | undefined> {
+    if (run.persistedActivityEventIds.has(item.eventId)) {
+      return undefined;
+    }
+    run.persistedActivityEventIds.add(item.eventId);
+    run.nextDurableOrdinal += 1;
+    const record: SkillRunDurableActivityRecord = {
+      clientRequestId: run.request.clientRequestId,
+      sessionId: run.request.sessionId,
+      eventId: item.eventId,
+      kind: item.kind,
+      ordinal: run.nextDurableOrdinal,
+      summary: item.summary,
+      toolName: item.toolName,
+      callId: item.callId,
+      status: item.status,
+      question: item.question,
+      options: item.options,
+      approvalId: item.approvalId,
+    };
+    if (persistSanitizedActivity) {
+      try {
+        await persistSanitizedActivity(record);
+      } catch {
+        markPersistenceGap(run, "activity", item.eventId);
+      }
+    }
+    const projectionItem: SkillRunActivityItem = {
+      ...item,
+      ordinal: record.ordinal,
+    };
+    return appendSanitizedActivity(run.projection.activities, projectionItem);
+  }
+
+  function hasActiveNonTerminalRun(sessionId: string): boolean {
+    for (const run of runs.values()) {
+      if (
+        run.request.sessionId === sessionId &&
+        !run.terminalConfirmed &&
+        !isSkillRunTerminalPhase(run.projection.phase)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function emitTelemetry(
+    event: Omit<SkillRunTelemetryEvent, "at"> & { at?: string },
+  ): void {
+    try {
+      recordTelemetry({
+        at: event.at ?? nowIso(),
+        event: event.event,
+        featureMode: event.featureMode ?? getMode(),
+        outcome: event.outcome,
+        errorCode: event.errorCode,
+        phase: event.phase,
+        reconnectAttempt: event.reconnectAttempt,
+        artifactItemCount: event.artifactItemCount,
+        requestFingerprint: event.requestFingerprint,
+      });
+    } catch {
+      // telemetry must never throw
+    }
+  }
+
+  function rejectStart(
+    input: SkillRunStartInput,
+    errorCode: string,
+    message: string,
+  ): SkillRunStartResult {
+    emitTelemetry({
+      event: "start",
+      outcome: "error",
+      errorCode,
+      requestFingerprint: fingerprintRequestId(input.clientRequestId),
+    });
+    if (errorCode === "RUN_ALREADY_ACTIVE") {
+      emitTelemetry({
+        event: "duplicate-prevented",
+        outcome: "ok",
+        errorCode,
+        requestFingerprint: fingerprintRequestId(input.clientRequestId),
+      });
+    }
+    return {
+      accepted: false,
+      errorCode,
+      message,
+      clientRequestId: input.clientRequestId,
+    };
+  }
+
+  async function discoverArtifacts(run: ActiveRun, runId: string): Promise<void> {
+    try {
+      updateProjection(run, { phase: "discovering-artifacts" });
+      const artifacts = await gateway.listRunArtifacts(runId);
+      if (options.onUpsertArtifact) {
+        for (const meta of artifacts) {
+          try {
+            await options.onUpsertArtifact({
+              meta,
+              runId,
+              sessionId: run.request.sessionId,
+              profileId: run.request.profileId,
+              clientRequestId: run.request.clientRequestId,
+            });
+          } catch {
+            // ignore individual artifact upsert error
+          }
+        }
+      }
+      updateProjection(run, {
+        phase: "succeeded",
+        artifacts: artifacts.length > 0 ? artifacts : undefined,
+        artifactDiscoveryError: false,
+        artifactDiscoveryMessage: undefined,
+      });
+      emitTelemetry({
+        event: "artifact",
+        outcome: "ok",
+        artifactItemCount: artifacts.length,
+        requestFingerprint: fingerprintRequestId(run.request.clientRequestId),
+      });
+    } catch {
+      // Artifact discovery failure does not fail a succeeded run
+      updateProjection(run, {
+        phase: "succeeded",
+        artifactDiscoveryError: true,
+        artifactDiscoveryMessage: "Failed to discover output artifacts",
+      });
+      emitTelemetry({
+        event: "artifact",
+        outcome: "error",
+        errorCode: "ARTIFACT_DISCOVERY_FAILED",
+        requestFingerprint: fingerprintRequestId(run.request.clientRequestId),
+      });
+    }
+  }
+
+  async function pollStatus(run: ActiveRun, runId: string): Promise<void> {
+    if (run.terminalConfirmed || disposed) return;
+    try {
+      const snap = await gateway.getRunSnapshot(runId);
+      const phase = parseSkillRunStatusToPhase(snap.status);
+      if (phase === "succeeded") {
+        await resolveSuccessfulTerminal(run, runId, {
+          providerRunId: snap.runId,
+          artifacts: snap.artifacts,
+        });
+      } else if (isSkillRunTerminalPhase(phase)) {
+        finalizeTerminal(run, {
+          providerRunId: snap.runId,
+          phase,
+          errorCode: snap.errorCode,
+          errorMessage: snap.errorMessage,
+        });
+        emitTelemetry({
+          event: "terminal",
+          outcome: phase === "cancelled" ? "ok" : "error",
+          phase,
+          errorCode: snap.errorCode,
+          requestFingerprint: fingerprintRequestId(run.request.clientRequestId),
+        });
+      } else {
+        updateProjection(run, {
+          providerRunId: snap.runId,
+          phase,
+        });
+        if (!run.terminalConfirmed && !disposed) {
+          run.pollTimer = setTimeout(() => {
+            void pollStatus(run, runId);
+          }, 4000);
+        }
+      }
+    } catch (err) {
+      if (!run.terminalConfirmed && !disposed) {
+        run.pollTimer = setTimeout(() => {
+          void pollStatus(run, runId);
+        }, 5000);
+      }
+    }
+  }
+
+  async function consumeSse(run: ActiveRun, runId: string): Promise<void> {
+    let reconnectAttempts = 0;
+    const maxAttempts = 3;
+
+    // Bounded poll runs while SSE is still open so a hung stream cannot block
+    // Bundle terminal status. Post-disconnect poll remains as fallback below.
+    if (!run.terminalConfirmed && !disposed) {
+      void pollStatus(run, runId);
+    }
+
+    while (reconnectAttempts < maxAttempts && !run.terminalConfirmed && !disposed) {
+      try {
+        const res = await gateway.openEventStream(runId, {
+          lastEventId: run.projection.lastEventId ?? undefined,
+          signal: run.abort.signal,
+        });
+
+        if (!res.ok || !res.body) {
+          throw new Error(`SSE stream failed: ${res.status}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (!run.terminalConfirmed && !disposed) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          // @lat: [[skill-run#M6h Streaming delta mapping]]
+          const parts = buffer.split(/\r?\n\r?\n/);
+          buffer = parts.pop() ?? "";
+
+          for (const part of parts) {
+            const parsed = parseRunSseBlock(part);
+            if (!parsed || !parsed.data) continue;
+
+            if (parsed.id && run.seenEventIds.has(parsed.id)) {
+              continue;
+            }
+            if (parsed.id) {
+              run.seenEventIds.add(parsed.id);
+            }
+
+            let payload: Record<string, unknown> = {};
+            try {
+              payload = JSON.parse(parsed.data) as Record<string, unknown>;
+            } catch {
+              payload = { text: parsed.data };
+            }
+
+            const event = parseSkillRunEvent(parsed.eventType, payload);
+            const activityEventId =
+              typeof payload.event_id === "string" && payload.event_id.trim()
+                ? payload.event_id.trim()
+                : event.eventId;
+            if (parsed.id) {
+              event.eventId = parsed.id;
+            }
+
+            if (!event.rawUnknown) {
+              reconnectAttempts = 0;
+              const patch: Partial<SkillRunProjection> = {
+                lastEventId: event.eventId ?? run.projection.lastEventId,
+                eventSeq: event.eventSeq ?? run.projection.eventSeq + 1,
+              };
+              if (event.phase) patch.phase = event.phase;
+              if (event.displayStage) patch.displayStage = event.displayStage;
+              if (
+                event.messageId &&
+                event.deltaSeq != null &&
+                event.deltaText !== undefined
+              ) {
+                let buffer = run.deltaBuffers.get(event.messageId);
+                if (!buffer) {
+                  buffer = { text: "", nextSeq: 1, sealed: false };
+                  run.deltaBuffers.set(event.messageId, buffer);
+                }
+                if (!buffer.sealed && event.deltaSeq === buffer.nextSeq) {
+                  buffer.text += event.deltaText;
+                  buffer.nextSeq += 1;
+                  patch.text = buffer.text;
+                }
+              } else if (event.text) {
+                if (event.messageId) {
+                  run.deltaBuffers.set(event.messageId, {
+                    text: event.text,
+                    nextSeq: 1,
+                    sealed: true,
+                  });
+                }
+                patch.text = event.text;
+              }
+              if (event.errorCode) patch.errorCode = event.errorCode;
+              if (event.errorMessage) patch.errorMessage = event.errorMessage;
+              if (event.artifacts) patch.artifacts = event.artifacts;
+              if (event.activity && activityEventId && !run.terminalConfirmed) {
+                const persisted = await persistActivityBeforeCap(run, {
+                  eventId: activityEventId,
+                  kind: event.activity.kind,
+                  summary: event.activity.summary,
+                  toolName: event.activity.toolName,
+                  callId: event.activity.callId,
+                  status: event.activity.status,
+                  question: event.activity.question,
+                  options: event.activity.options,
+                  approvalId: event.activity.approvalId,
+                });
+                if (persisted) {
+                  patch.activities = persisted;
+                }
+              }
+
+              if (event.phase === "succeeded") {
+                await resolveSuccessfulTerminal(run, runId, patch);
+                return;
+              }
+
+              if (event.phase && isSkillRunTerminalPhase(event.phase)) {
+                finalizeTerminal(run, patch);
+                emitTelemetry({
+                  event: "terminal",
+                  outcome: event.phase === "cancelled" ? "ok" : "error",
+                  phase: event.phase,
+                  ...(event.errorCode ? { errorCode: event.errorCode } : {}),
+                  requestFingerprint: fingerprintRequestId(run.request.clientRequestId),
+                });
+                return;
+              }
+
+              updateProjection(run, patch);
+            }
+          }
+        }
+        if (!run.terminalConfirmed && !disposed) {
+          throw new Error("Skill Run event stream ended before terminal status");
+        }
+      } catch (err) {
+        if (run.terminalConfirmed || disposed) return;
+        reconnectAttempts++;
+        emitTelemetry({
+          event: "reconnect",
+          outcome: "ok",
+          reconnectAttempt: reconnectAttempts,
+          requestFingerprint: fingerprintRequestId(run.request.clientRequestId),
+        });
+        if (reconnectAttempts < maxAttempts) {
+          try {
+            await sleep(1000 * reconnectAttempts, run.abort.signal);
+          } catch {
+            return;
+          }
+        }
+      }
+    }
+
+    // Fall back to polling if SSE disconnected
+    if (!run.terminalConfirmed && !disposed) {
+      await pollStatus(run, runId);
+    }
+  }
+
+  function currentScopeKey(): string {
+    return gateway.getAuthScopeKey?.() ?? "unknown|user:anonymous";
+  }
+
+  function overlayedCatalog(catalog: SkillCatalogResponse): SkillCatalogResponse {
+    return preferences.overlayCatalog(currentScopeKey(), catalog);
+  }
+
+  function recordAcceptedRecent(toolName: string): void {
+    preferences.recordRecent(currentScopeKey(), toolName);
+  }
+
+  return {
+    async listCatalog(): Promise<SkillCatalogResponse> {
+      const catalog = await gateway.listCatalog();
+      emitTelemetry({
+        event: "catalog",
+        outcome: catalog.status === "ready" ? "ok" : "error",
+        errorCode: catalog.status === "ready" ? undefined : catalog.status,
+      });
+      return overlayedCatalog(catalog);
+    },
+
+    async refreshCatalog(): Promise<SkillCatalogResponse> {
+      gateway.clearCache();
+      const catalog = await gateway.listCatalog();
+      emitTelemetry({
+        event: "catalog",
+        outcome: catalog.status === "ready" ? "ok" : "error",
+        errorCode: catalog.status === "ready" ? undefined : catalog.status,
+      });
+      return overlayedCatalog(catalog);
+    },
+
+    async setCatalogFavorite(
+      input: SkillRunSetCatalogFavoriteInput,
+    ): Promise<SkillCatalogResponse> {
+      const catalog = await gateway.listCatalog();
+      emitTelemetry({
+        event: "catalog",
+        outcome: catalog.status === "ready" ? "ok" : "error",
+        errorCode: catalog.status === "ready" ? undefined : catalog.status,
+      });
+      const names = new Set(
+        catalog.status === "ready" ? catalog.tools.map((tool) => tool.toolName) : [],
+      );
+      preferences.setFavorite(
+        currentScopeKey(),
+        input.toolName,
+        input.favorited,
+        names,
+      );
+      return overlayedCatalog(catalog);
+    },
+
+    async start(input: SkillRunStartInput): Promise<SkillRunStartResult> {
+      if (disposed) {
+        return rejectStart(input, "SERVICE_DISPOSED", "SkillRunService is disposed");
+      }
+
+      if (getMode() !== "skill-first") {
+        return rejectStart(
+          input,
+          "START_DISABLED_FEATURE_MODE",
+          "Skill Run start is disabled unless feature mode is skill-first.",
+        );
+      }
+
+      if (!gateway.hasConsumerLock()) {
+        return rejectStart(
+          input,
+          "START_DISABLED_NO_LOCK",
+          "Skill Run Consumer Contract lock is not available; execution is disabled.",
+        );
+      }
+
+      if (hasActiveNonTerminalRun(input.sessionId)) {
+        return rejectStart(
+          input,
+          "RUN_ALREADY_ACTIVE",
+          "A skill run is already active for this session.",
+        );
+      }
+
+      const existing = runs.get(input.clientRequestId);
+      if (existing) {
+        emitTelemetry({
+          event: "start",
+          outcome: "ok",
+          requestFingerprint: fingerprintRequestId(input.clientRequestId),
+        });
+        emitTelemetry({
+          event: "duplicate-prevented",
+          outcome: "ok",
+          requestFingerprint: fingerprintRequestId(input.clientRequestId),
+        });
+        recordAcceptedRecent(existing.projection.toolName);
+        return {
+          accepted: true,
+          projection: existing.projection,
+        };
+      }
+
+      const catalog = await gateway.listCatalog();
+      emitTelemetry({
+        event: "catalog",
+        outcome: catalog.status === "ready" ? "ok" : "error",
+        errorCode: catalog.status === "ready" ? undefined : catalog.status,
+      });
+      if (catalog.status !== "ready") {
+        return rejectStart(
+          input,
+          "CATALOG_UNAVAILABLE",
+          "Skill catalog is not ready for execution.",
+        );
+      }
+
+      const bindResult = bindPromptFirstTool(
+        input.toolName,
+        input.prompt,
+        catalog.tools,
+        input.extraParameters,
+      );
+      if (!bindResult.ok) {
+        return rejectStart(input, bindResult.errorCode, bindResult.message);
+      }
+
+      const requestedFileIds = requestedStartFileIds(input);
+      const stagedAttachments: Array<{
+        filename: string;
+        bytes: Uint8Array;
+        contentType: string;
+      }> = [];
+      if (requestedFileIds.length > 0) {
+        if (
+          bindResult.tool.supportsAttachments !== true ||
+          !gateway.hasAttachmentBundle()
+        ) {
+          return rejectStart(
+            input,
+            "ATTACHMENT_NOT_SUPPORTED",
+            "This skill does not accept attachments.",
+          );
+        }
+        for (const fileId of requestedFileIds) {
+          const managed = resolveManagedFile(input.profileId, fileId);
+          if (!managed || isIneligibleManagedFile(managed) || !managed.managedPath) {
+            return rejectStart(
+              input,
+              managed && isIneligibleManagedFile(managed)
+                ? "ATTACHMENT_NOT_SUPPORTED"
+                : "ATTACHMENT_NOT_FOUND",
+              "Skill attachment request was not accepted",
+            );
+          }
+          try {
+            stagedAttachments.push({
+              filename: managed.name,
+              bytes: await readManagedBytes(managed.managedPath),
+              contentType: managed.mime.trim() || "application/octet-stream",
+            });
+          } catch {
+            return rejectStart(
+              input,
+              "ATTACHMENT_NOT_FOUND",
+              "Skill attachment request was not accepted",
+            );
+          }
+        }
+      }
+
+      const validatedToolName = bindResult.tool.toolName;
+      const createdAt = nowIso();
+      const lockResult = options.lockSessionTool?.(input.sessionId, {
+        executionMode: "skill-run",
+        toolName: validatedToolName,
+        toolTitle: bindResult.tool.title,
+        updatedAt: createdAt,
+      });
+      if (lockResult?.status === "conflict") {
+        return rejectStart(
+          input,
+          "SKILL_SESSION_TOOL_LOCKED",
+          "This session is locked to a different skill.",
+        );
+      }
+      const initialProjection: SkillRunProjection = {
+        clientRequestId: input.clientRequestId,
+        providerRunId: null,
+        toolName: validatedToolName,
+        promptSummary: input.prompt.slice(0, 120),
+        sessionId: input.sessionId,
+        profileId: input.profileId,
+        authGeneration: input.authGeneration,
+        phase: "pending-submit",
+        displayStage: defaultDisplayStage("pending-submit"),
+        lastEventId: null,
+        eventSeq: 0,
+        createdAt,
+        updatedAt: createdAt,
+      };
+
+      const activeRun: ActiveRun = {
+        request: { ...input, toolName: validatedToolName },
+        projection: initialProjection,
+        promptField: bindResult.promptField,
+        callArguments: bindResult.arguments,
+        abort: new AbortController(),
+        pollTimer: null,
+        terminalConfirmed: false,
+        seenEventIds: new Set(),
+        approvalDecisionKeys: new Map(),
+        nextDurableOrdinal: 0,
+        persistedActivityEventIds: new Set(),
+        persistenceGap: false,
+        deltaBuffers: new Map(),
+      };
+
+      runs.set(input.clientRequestId, activeRun);
+      persistContinuation?.(initialProjection);
+      emit(initialProjection);
+      persistRunSnapshot(activeRun);
+      emitTelemetry({
+        event: "start",
+        outcome: "ok",
+        requestFingerprint: fingerprintRequestId(input.clientRequestId),
+      });
+
+      void (async () => {
+        try {
+          updateProjection(activeRun, { phase: "starting" });
+          if (process.env.SMC_SKILL_RUN_DEBUG === "1") {
+            // eslint-disable-next-line no-console
+            console.error("[skill-run][start] calling tools/call", {
+              toolName: validatedToolName,
+              promptField: activeRun.promptField,
+              requestFingerprint: fingerprintRequestId(input.clientRequestId),
+            });
+          }
+          const attachmentRefs: string[] = [];
+          for (const staged of stagedAttachments) {
+            const receipt = await gateway.uploadAttachment(staged);
+            attachmentRefs.push(receipt.attachmentRef);
+          }
+          const accepted = await gateway.callSkill({
+            toolName: validatedToolName,
+            arguments: activeRun.callArguments,
+            idempotencyKey: input.clientRequestId,
+            ...(attachmentRefs.length > 0 ? { attachmentRefs } : {}),
+          });
+
+          updateProjection(activeRun, {
+            providerRunId: accepted.runId,
+            phase: "running",
+          });
+          emitTelemetry({
+            event: "accepted",
+            outcome: "ok",
+            requestFingerprint: fingerprintRequestId(input.clientRequestId),
+          });
+
+          void consumeSse(activeRun, accepted.runId);
+        } catch (err) {
+          const { errorCode, errorMessage } = sanitizeStartFailure(err);
+
+          finalizeTerminal(activeRun, {
+            phase: "failed",
+            errorCode,
+            errorMessage,
+          });
+          emitTelemetry({
+            event: "terminal",
+            outcome: "error",
+            phase: "failed",
+            errorCode,
+            requestFingerprint: fingerprintRequestId(input.clientRequestId),
+          });
+        }
+      })();
+
+      recordAcceptedRecent(validatedToolName);
+      return {
+        accepted: true,
+        projection: initialProjection,
+      };
+    },
+
+    async cancel(input: SkillRunCancelInput): Promise<SkillRunCancelResult> {
+      const active = runs.get(input.clientRequestId);
+      if (!active) {
+        return {
+          success: false,
+          errorCode: "NO_ACTIVE_RUN",
+          message: `No active skill run found for clientRequestId: ${input.clientRequestId}`,
+        };
+      }
+
+      if (active.terminalConfirmed) {
+        return {
+          success: true,
+          projection: active.projection,
+        };
+      }
+
+      const updated = finalizeTerminal(active, {
+        phase: "cancelled",
+        displayStage: "Skill execution cancelled by user",
+      });
+      emitTelemetry({
+        event: "terminal",
+        outcome: "ok",
+        phase: "cancelled",
+        requestFingerprint: fingerprintRequestId(input.clientRequestId),
+      });
+
+      if (active.projection.providerRunId) {
+        try {
+          await gateway.cancelRun(active.projection.providerRunId);
+        } catch {
+          // ignore background cancel error
+        }
+      }
+
+      return {
+        success: true,
+        projection: updated,
+      };
+    },
+
+    async decideApproval(
+      input: SkillRunDecideApprovalInput,
+    ): Promise<SkillRunDecideApprovalResult> {
+      const active = runs.get(input.clientRequestId);
+      if (!active || active.request.sessionId !== input.sessionId) {
+        return {
+          success: false,
+          errorCode: "NO_ACTIVE_RUN",
+          message: `No active skill run found for clientRequestId: ${input.clientRequestId}`,
+        };
+      }
+
+      if (active.projection.phase !== "waiting-approval") {
+        return {
+          success: false,
+          errorCode: "APPROVAL_NOT_WAITING",
+          message: "Approval decision is only allowed while waiting for approval.",
+          projection: active.projection,
+        };
+      }
+
+      const approvalId = currentWaitingApprovalId(active.projection);
+      if (!approvalId) {
+        return {
+          success: false,
+          errorCode: "APPROVAL_ID_MISSING",
+          message: "No current approval id is available for this run.",
+          projection: active.projection,
+        };
+      }
+
+      if (!active.projection.providerRunId) {
+        return {
+          success: false,
+          errorCode: "APPROVAL_NOT_WAITING",
+          message: "Approval decision is only allowed while waiting for approval.",
+          projection: active.projection,
+        };
+      }
+
+      if (!gateway.hasApprovalDecisionBundle()) {
+        return {
+          success: false,
+          errorCode: "APPROVAL_DECISION_UNSUPPORTED",
+          message: "Skill Run approval decision contract is not available.",
+          projection: active.projection,
+        };
+      }
+
+      let idempotencyKey = active.approvalDecisionKeys.get(approvalId);
+      if (!idempotencyKey) {
+        idempotencyKey = randomUUID();
+        active.approvalDecisionKeys.set(approvalId, idempotencyKey);
+      }
+
+      try {
+        const receipt = await gateway.decideApproval({
+          runId: active.projection.providerRunId,
+          approvalId,
+          decision: input.decision,
+          idempotencyKey,
+        });
+        const receiptPhase = parseSkillRunStatusToPhase(receipt.status);
+        if (isSkillRunTerminalPhase(receiptPhase)) {
+          const updated = finalizeTerminal(active, {
+            phase: receiptPhase,
+            decidedApprovalId: approvalId,
+          });
+          return {
+            success: true,
+            projection: updated,
+          };
+        }
+        const updated = updateProjection(active, {
+          decidedApprovalId: approvalId,
+        });
+        return {
+          success: true,
+          projection: updated,
+        };
+      } catch (err) {
+        const sanitized = sanitizeDecisionFailure(err);
+        if (active.terminalConfirmed) {
+          return {
+            success: false,
+            errorCode: sanitized.errorCode,
+            message: sanitized.errorMessage,
+            projection: active.projection,
+          };
+        }
+        const updated = updateProjection(active, {
+          errorCode: sanitized.errorCode,
+          errorMessage: sanitized.errorMessage,
+        });
+        return {
+          success: false,
+          errorCode: sanitized.errorCode,
+          message: sanitized.errorMessage,
+          projection: updated,
+        };
+      }
+    },
+
+    getProjection(clientRequestId: string): SkillRunProjection | null {
+      return runs.get(clientRequestId)?.projection ?? null;
+    },
+
+    listProjections(sessionId: string): SkillRunProjection[] {
+      const list: SkillRunProjection[] = [];
+      for (const r of runs.values()) {
+        if (r.request.sessionId === sessionId) {
+          list.push(r.projection);
+        }
+      }
+      return list;
+    },
+
+    async rehydrate(item: {
+      clientRequestId: string;
+      providerRunId: string | null;
+      toolName: string;
+      promptSummary: string;
+      sessionId: string;
+      profileId: string;
+      authGeneration?: string;
+      lastEventId: string | null;
+      phase: SkillRunLocalPhase;
+      text?: string;
+      errorCode?: string;
+      errorMessage?: string;
+      updatedAt: string;
+    }): Promise<SkillRunProjection | null> {
+      if (runs.has(item.clientRequestId)) {
+        return runs.get(item.clientRequestId)!.projection;
+      }
+
+      const projection: SkillRunProjection = {
+        clientRequestId: item.clientRequestId,
+        providerRunId: item.providerRunId,
+        toolName: item.toolName,
+        promptSummary: item.promptSummary,
+        sessionId: item.sessionId,
+        profileId: item.profileId,
+        authGeneration: item.authGeneration,
+        phase: item.phase,
+        displayStage: defaultDisplayStage(item.phase),
+        lastEventId: item.lastEventId,
+        eventSeq: 0,
+        text: item.text,
+        errorCode: item.errorCode,
+        errorMessage: item.errorMessage,
+        createdAt: item.updatedAt,
+        updatedAt: item.updatedAt,
+      };
+
+      const retryResult =
+        item.phase === "succeeded" &&
+        item.providerRunId != null &&
+        item.errorCode === "RESULT_RETRIEVAL_FAILED";
+      const isTerminal = isSkillRunTerminalPhase(item.phase) && !retryResult;
+      const activeRun: ActiveRun = {
+        request: {
+          toolName: item.toolName,
+          prompt: item.promptSummary,
+          clientRequestId: item.clientRequestId,
+          sessionId: item.sessionId,
+          profileId: item.profileId,
+          authGeneration: item.authGeneration,
+        },
+        projection,
+        promptField: "prompt",
+        callArguments: {},
+        abort: new AbortController(),
+        pollTimer: null,
+        terminalConfirmed: isTerminal,
+        seenEventIds: new Set(),
+        approvalDecisionKeys: new Map(),
+        nextDurableOrdinal: 0,
+        persistedActivityEventIds: new Set(),
+        persistenceGap: false,
+        deltaBuffers: new Map(),
+      };
+
+      runs.set(item.clientRequestId, activeRun);
+
+      if (!isTerminal && item.providerRunId && gateway.hasConsumerLock()) {
+        if (retryResult) {
+          void resolveSuccessfulTerminal(activeRun, item.providerRunId);
+        } else {
+          void consumeSse(activeRun, item.providerRunId);
+        }
+      }
+
+      return projection;
+    },
+
+    async retryArtifactDiscovery(
+      input: SkillRunRetryArtifactDiscoveryInput,
+    ): Promise<SkillRunProjection | null> {
+      const active = runs.get(input.clientRequestId);
+      if (
+        !active ||
+        !active.projection.providerRunId ||
+        active.request.sessionId !== input.sessionId
+      ) {
+        return null;
+      }
+      await discoverArtifacts(active, active.projection.providerRunId);
+      return active.projection;
+    },
+
+    getFeatureMode(): SkillRunFeatureMode {
+      return getMode();
+    },
+
+    subscribe(listener: SkillRunProjectionListener): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+
+    dispose(): void {
+      disposed = true;
+      for (const run of runs.values()) {
+        run.abort.abort();
+        if (run.pollTimer) {
+          clearTimeout(run.pollTimer);
+          run.pollTimer = null;
+        }
+      }
+      runs.clear();
+      listeners.clear();
+      gateway.dispose();
+    },
+  };
+}

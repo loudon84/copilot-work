@@ -1,0 +1,748 @@
+// @lat: [[provider-setup#Provider setup#Agent config sync for named providers]]
+import { existsSync, readFileSync } from "fs";
+import { profilePaths, safeWriteFile } from "./utils";
+
+/**
+ * Bridge between hermes-agent's config.yaml provider sections and the
+ * desktop's own stores, so providers added from the terminal show up in the
+ * desktop UI and providers added in the desktop are visible to `hermes`.
+ *
+ * The agent reads two user-config shapes (hermes_cli/providers.py):
+ *   - `providers:` — a dict of named endpoints: `{slug: {name, base_url,
+ *     key_env, transport}}`, resolved by `resolve_user_provider`. This is the
+ *     shape the desktop mirrors its named custom providers into.
+ *   - `custom_providers:` — the legacy list (`- name/base_url/model/api_key`),
+ *     already imported into the model library by [[src/main/models.ts]].
+ *
+ * All edits are text-based (offset/line splicing, like config.ts) so user
+ * comments and unrelated keys in config.yaml survive round-trips. In
+ * particular, updating an entry patches individual field values in place —
+ * a terminal user's extra fields (e.g. `transport:`) are never dropped.
+ */
+
+export interface AgentUserProvider {
+  /** The `providers:` dict key — what `--provider <slug>` resolves. */
+  slug: string;
+  /** Display name (`name:`), falling back to the slug. */
+  name: string;
+  /** Endpoint base URL (`base_url:`/`api:`/`url:` — same aliases the agent accepts). */
+  baseUrl: string;
+  /** Env var holding the API key (`key_env:`), empty when unset. */
+  keyEnv: string;
+}
+
+/** Slug used as the config.yaml `providers:` dict key for a display name —
+ *  same normalization the agent applies to custom-provider names. */
+export function slugifyProviderName(name: string): string {
+  return (name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function readConfig(profile?: string): { file: string; content: string } {
+  const { configFile } = profilePaths(profile);
+  return {
+    file: configFile,
+    content: existsSync(configFile) ? readFileSync(configFile, "utf-8") : "",
+  };
+}
+
+function stripScalar(raw: string): string {
+  const trimmed = raw.trim();
+  // A double-quoted scalar: unquote and unescape (the inverse of yamlQuote),
+  // and don't apply comment stripping inside the quotes.
+  const dq = trimmed.match(/^"((?:[^"\\]|\\.)*)"/);
+  if (dq) return dq[1].replace(/\\(["\\])/g, "$1");
+  const sq = trimmed.match(/^'((?:[^']|'')*)'/);
+  if (sq) return sq[1].replace(/''/g, "'");
+  return trimmed
+    .replace(/\s+#.*$/, "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+}
+
+interface FieldSpan {
+  value: string;
+  /** Offsets bracketing the raw value text on the field's line. */
+  valueStart: number;
+  valueEnd: number;
+}
+
+interface ProviderEntrySpan {
+  slug: string;
+  /** Offset of the `<slug>:` line start. */
+  start: number;
+  /** Offset just past the entry's last line (exclusive, incl. newline). */
+  end: number;
+  /** Offset just past the `<slug>:` header line — where a new field goes. */
+  headerEnd: number;
+  /** Indent of this entry's direct fields ("" until a field is seen). */
+  fieldIndent: string;
+  fields: Map<string, FieldSpan>;
+}
+
+interface ProvidersBlock {
+  /** Offset just past the last body line (exclusive) — append point. */
+  bodyEnd: number;
+  /** Indent of provider entries (children of `providers:`). */
+  childIndent: string;
+  entries: ProviderEntrySpan[];
+}
+
+/** Locate the top-level `providers:` block and its entries. Null when the
+ *  file has no such block. Line-based, indentation-scoped: only an entry's
+ *  direct children are recorded as fields, so nested maps (e.g. a `models:`
+ *  sub-dict) can't shadow `name`/`base_url`/`key_env`. */
+function findProvidersBlock(content: string): ProvidersBlock | null {
+  const header = content.match(/^providers[^\S\r\n]*:[^\S\r\n]*(#.*)?\r?\n/m);
+  if (!header || header.index === undefined) return null;
+  if (header.index > 0 && content[header.index - 1] !== "\n") return null;
+
+  const bodyStart = header.index + header[0].length;
+  const lines = content.slice(bodyStart).split(/(?<=\n)/);
+  const entries: ProviderEntrySpan[] = [];
+  let childIndent = "";
+  let offset = bodyStart;
+  let bodyEnd = bodyStart;
+  let current: ProviderEntrySpan | null = null;
+
+  for (const line of lines) {
+    // Lines keep their trailing newline (lookbehind split) so offsets add up;
+    // match against the newline-stripped text since `$` won't cross a `\n`.
+    const text = line.replace(/\r?\n$/, "");
+    const isBlank = /^\s*$/.test(text);
+    if (!isBlank && !/^[ \t]/.test(text)) break; // next top-level key
+    if (!isBlank) {
+      const keyMatch = text.match(/^([ \t]+)([\w.-]+)([^\S\r\n]*:)(.*)$/);
+      if (keyMatch) {
+        const [, ind, key, colon, rest] = keyMatch;
+        if (!childIndent) childIndent = ind;
+        if (ind.length <= childIndent.length) {
+          current = {
+            slug: key,
+            start: offset,
+            end: offset + line.length,
+            headerEnd: offset + line.length,
+            fieldIndent: "",
+            fields: new Map(),
+          };
+          entries.push(current);
+        } else if (current) {
+          if (!current.fieldIndent) current.fieldIndent = ind;
+          if (ind.length === current.fieldIndent.length) {
+            const valueStart =
+              offset +
+              ind.length +
+              key.length +
+              colon.length +
+              (rest.length - rest.trimStart().length);
+            const rawValue = rest.trimStart();
+            current.fields.set(key, {
+              value: stripScalar(rawValue),
+              valueStart,
+              valueEnd: valueStart + rawValue.replace(/\s+$/, "").length,
+            });
+          }
+          current.end = offset + line.length;
+        }
+      } else if (current) {
+        // Non key:value content (e.g. list items) still belongs to the entry.
+        current.end = offset + line.length;
+      }
+      bodyEnd = offset + line.length;
+    }
+    offset += line.length;
+  }
+  return { bodyEnd, childIndent: childIndent || "  ", entries };
+}
+
+/** Parse the `providers:` dict from a profile's config.yaml. */
+export function listAgentUserProviders(profile?: string): AgentUserProvider[] {
+  const { content } = readConfig(profile);
+  if (!content) return [];
+  const block = findProvidersBlock(content);
+  if (!block) return [];
+  return block.entries.map((e) => ({
+    slug: e.slug,
+    name: e.fields.get("name")?.value || e.slug,
+    // Same base-URL aliases resolve_user_provider accepts, same precedence.
+    baseUrl:
+      e.fields.get("api")?.value ||
+      e.fields.get("url")?.value ||
+      e.fields.get("base_url")?.value ||
+      "",
+    keyEnv: e.fields.get("key_env")?.value || "",
+  }));
+}
+
+/** Double-quoted YAML scalar: backslashes and quotes escaped so a provider
+ *  name like `My "Fast" Provider` can't produce an unparseable config.yaml. */
+function yamlQuote(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function renderEntry(
+  indent: string,
+  input: { slug: string; name: string; baseUrl: string; keyEnv: string },
+): string {
+  const sub = indent + "  ";
+  return (
+    `${indent}${input.slug}:\n` +
+    `${sub}name: ${yamlQuote(input.name)}\n` +
+    `${sub}base_url: ${yamlQuote(input.baseUrl)}\n` +
+    (input.keyEnv ? `${sub}key_env: ${yamlQuote(input.keyEnv)}\n` : "")
+  );
+}
+
+/**
+ * Create or update a `providers:` entry in config.yaml. An existing entry is
+ * matched by `key_env`, then by slug — so a desktop re-save updates the
+ * terminal-visible block in place instead of duplicating it. Updates patch
+ * only the `name`/`base_url`/`key_env` values; other fields are preserved.
+ */
+export function upsertAgentUserProvider(
+  profile: string | undefined,
+  input: { name: string; baseUrl: string; keyEnv: string; slug?: string },
+): void {
+  const name = (input.name || "").trim();
+  const baseUrl = (input.baseUrl || "").trim();
+  const slug = (input.slug || slugifyProviderName(name)).trim();
+  if (!name || !baseUrl || !slug) return;
+
+  const { file, content } = readConfig(profile);
+  const block = findProvidersBlock(content);
+  const entry = { slug, name, baseUrl, keyEnv: input.keyEnv || "" };
+
+  if (!block) {
+    // The agent's config scaffold writes an inline empty dict (`providers: {}`),
+    // which the block parser can't index. Rewrite that line into block form —
+    // appending a second `providers:` key instead would make the YAML
+    // ambiguous (this exact miss silently disabled the SMC Copilot mirror).
+    const emptyFlow = content.match(
+      /^providers[^\S\r\n]*:[^\S\r\n]*\{[^\S\r\n]*\}[^\S\r\n]*(#.*)?\r?\n?/m,
+    );
+    if (emptyFlow && emptyFlow.index !== undefined) {
+      const replacement = `providers:\n${renderEntry("  ", entry)}`;
+      safeWriteFile(
+        file,
+        content.slice(0, emptyFlow.index) +
+          replacement +
+          content.slice(emptyFlow.index + emptyFlow[0].length),
+      );
+      return;
+    }
+    // Any other unparseable `providers:` form (a non-empty flow dict) — bail
+    // rather than append a duplicate top-level key.
+    if (/^providers[^\S\r\n]*:/m.test(content)) return;
+    const sep = content === "" || content.endsWith("\n") ? "" : "\n";
+    safeWriteFile(
+      file,
+      `${content}${sep}providers:\n${renderEntry("  ", entry)}`,
+    );
+    return;
+  }
+
+  const existing =
+    block.entries.find(
+      (e) => input.keyEnv && e.fields.get("key_env")?.value === input.keyEnv,
+    ) ?? block.entries.find((e) => e.slug === slug);
+
+  if (!existing) {
+    const rendered = renderEntry(block.childIndent, entry);
+    safeWriteFile(
+      file,
+      content.slice(0, block.bodyEnd) + rendered + content.slice(block.bodyEnd),
+    );
+    return;
+  }
+
+  // Patch fields in place, back-to-front so earlier offsets stay valid.
+  // The base-URL aliases (`api`/`url`) are updated under whichever name the
+  // entry already uses; missing fields are inserted after the header line.
+  const urlField = existing.fields.has("api")
+    ? "api"
+    : existing.fields.has("url")
+      ? "url"
+      : "base_url";
+  const wanted: [string, string][] = [
+    ["name", name],
+    [urlField, baseUrl],
+    ...(entry.keyEnv ? [["key_env", entry.keyEnv] as [string, string]] : []),
+  ];
+  const patches: { start: number; end: number; text: string }[] = [];
+  const fieldIndent = existing.fieldIndent || block.childIndent + "  ";
+  for (const [key, value] of wanted) {
+    const span = existing.fields.get(key);
+    if (span) {
+      if (span.value === value) continue;
+      patches.push({
+        start: span.valueStart,
+        end: span.valueEnd,
+        text: yamlQuote(value),
+      });
+    } else {
+      patches.push({
+        start: existing.headerEnd,
+        end: existing.headerEnd,
+        text: `${fieldIndent}${key}: ${yamlQuote(value)}\n`,
+      });
+    }
+  }
+  if (patches.length === 0) return; // nothing changed — don't rewrite the file
+  patches.sort((a, b) => b.start - a.start);
+  let next = content;
+  for (const p of patches) {
+    next = next.slice(0, p.start) + p.text + next.slice(p.end);
+  }
+  safeWriteFile(file, next);
+}
+
+/** Remove a `providers:` entry matched by key_env, or by slug derived from
+ *  the name. No-op when absent. */
+export function removeAgentUserProvider(
+  profile: string | undefined,
+  match: { name: string; keyEnv?: string },
+): void {
+  const { file, content } = readConfig(profile);
+  if (!content) return;
+  const block = findProvidersBlock(content);
+  if (!block) return;
+  const slug = slugifyProviderName(match.name);
+  const existing =
+    block.entries.find(
+      (e) => match.keyEnv && e.fields.get("key_env")?.value === match.keyEnv,
+    ) ?? block.entries.find((e) => e.slug === slug);
+  if (!existing) return;
+  safeWriteFile(
+    file,
+    content.slice(0, existing.start) + content.slice(existing.end),
+  );
+}
+
+// SMC Copilot's inference endpoint. Mirrored as a first-party user provider so
+// the agent can route it by slug; must match `OPENAI_COMPATIBLE_BASE_URLS`
+// (renderer constants) and the `URL_KEY_MAP` host pattern.
+const HERMESONE_BASE_URL = "http://llm.superic.com:3900/v1";
+
+/**
+ * Mirror first-party keyed brands into config.yaml `providers:` so the agent
+ * can route them as *named* providers. Today: SMC Copilot.
+ *
+ * Without this the gateway has no provider row for `inference.hermesone.org`
+ * — desktop models on that endpoint are saved as bare `custom` + base URL,
+ * and the agent resolves `--provider custom` against **the session's current
+ * base URL**. A session sitting on another provider (e.g. Nous) then sends
+ * the SMC Copilot model to the wrong endpoint (404, wrong catalog). A
+ * `providers: hermesone:` entry gives the switch a slug that always carries
+ * the right URL and key. Idempotent — the upsert no-ops when unchanged; runs
+ * on every model-library / provider-list read.
+ */
+export function mirrorFirstPartyAgentProviders(profile?: string): void {
+  try {
+    const { envFile } = profilePaths(profile);
+    if (!existsSync(envFile)) return;
+    const env = readFileSync(envFile, "utf-8");
+    const match = env.match(/^\s*HERMESONE_API_KEY\s*=\s*(.+)\s*$/m);
+    if (!match || !match[1].trim()) return;
+    upsertAgentUserProvider(profile, {
+      slug: "hermesone",
+      name: "SMC Copilot",
+      baseUrl: HERMESONE_BASE_URL,
+      keyEnv: "HERMESONE_API_KEY",
+    });
+  } catch {
+    /* best-effort — chat still works once the entry can be written */
+  }
+}
+
+/**
+ * List legacy `custom_providers:` entries (name / base_url / key_env) for
+ * Providers-card import. Model ids are ignored here — the chat picker expands
+ * them via [[src/main/models.ts#loadCustomProviders]].
+ */
+export function listLegacyCustomProviders(
+  profile?: string,
+): AgentUserProvider[] {
+  const { content } = readConfig(profile);
+  if (!content) return [];
+  const result: AgentUserProvider[] = [];
+  const lines = content.split("\n");
+  let inCustom = false;
+  let current: {
+    name: string;
+    baseUrl: string;
+    keyEnv: string;
+  } | null = null;
+
+  const push = (): void => {
+    if (!current) return;
+    const name = current.name.trim();
+    const baseUrl = current.baseUrl.trim();
+    if (!name || !baseUrl) {
+      current = null;
+      return;
+    }
+    result.push({
+      slug: name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
+      name,
+      baseUrl,
+      keyEnv: current.keyEnv.trim(),
+    });
+    current = null;
+  };
+
+  for (const line of lines) {
+    if (/^\s*custom_providers\s*:/.test(line)) {
+      inCustom = true;
+      continue;
+    }
+    if (!inCustom) continue;
+    if (/^\s*-\s*name\s*:/.test(line)) {
+      push();
+      const m = line.match(/name\s*:\s*["']?([^"'\n#]+)["']?/);
+      current = {
+        name: m ? m[1].trim() : "",
+        baseUrl: "",
+        keyEnv: "",
+      };
+      continue;
+    }
+    if (
+      /^[a-z]/.test(line) &&
+      !/^\s/.test(line) &&
+      !/^\s*-\s*name/.test(line)
+    ) {
+      push();
+      inCustom = false;
+      continue;
+    }
+    if (!current) continue;
+    const bm = line.match(/^\s*base_url\s*:\s*["']?([^"'\n#]+)["']?/);
+    if (bm) current.baseUrl = bm[1].trim();
+    const kem = line.match(/^\s*key_env\s*:\s*["']?([^"'\n#]+)["']?/);
+    if (kem) current.keyEnv = kem[1].trim();
+  }
+  push();
+  return result;
+}
+
+function normUrl(url: string): string {
+  return (url || "").trim().replace(/\/+$/, "").toLowerCase();
+}
+
+interface CustomProviderModelEntry {
+  name: string;
+  baseUrl: string;
+  keyEnv: string;
+  model: string;
+  extraModels: string[];
+  apiMode: string;
+}
+
+/** Parse `custom_providers:` list entries including model ids (for rewrite). */
+function parseCustomProviderModelEntries(
+  content: string,
+): CustomProviderModelEntry[] {
+  const result: CustomProviderModelEntry[] = [];
+  const lines = content.split("\n");
+  let inCustom = false;
+  let current: CustomProviderModelEntry | null = null;
+  let inModelsMap = false;
+
+  const finish = (): void => {
+    if (current && current.name.trim() && current.baseUrl.trim()) {
+      result.push(current);
+    }
+    current = null;
+    inModelsMap = false;
+  };
+
+  for (const line of lines) {
+    if (/^\s*custom_providers\s*:/.test(line)) {
+      inCustom = true;
+      continue;
+    }
+    if (!inCustom) continue;
+    if (/^\s*-\s*name\s*:/.test(line)) {
+      finish();
+      const m = line.match(/name\s*:\s*(.*)$/);
+      current = {
+        name: m ? stripScalar(m[1]) : "",
+        baseUrl: "",
+        keyEnv: "",
+        model: "",
+        extraModels: [],
+        apiMode: "",
+      };
+      inModelsMap = false;
+      continue;
+    }
+    if (
+      /^[a-z]/.test(line) &&
+      !/^\s/.test(line) &&
+      !/^\s*-\s*name/.test(line)
+    ) {
+      finish();
+      inCustom = false;
+      continue;
+    }
+    if (!current) continue;
+    if (/^\s{2,}models\s*:/.test(line)) {
+      inModelsMap = true;
+      continue;
+    }
+    if (inModelsMap) {
+      const modelId = line.match(
+        /^\s{4,}([A-Za-z0-9._:/-]+)\s*:\s*(?:#.*)?$/,
+      );
+      const nestedField = line.match(
+        /^\s{6,}(context_length|max_tokens|api_mode)\s*:/,
+      );
+      if (nestedField) {
+        // still inside a models.<id> body
+      } else if (modelId) {
+        const id = modelId[1].trim();
+        if (id && !current.extraModels.includes(id)) {
+          current.extraModels.push(id);
+        }
+      } else if (/^\s{2,}[a-z_]+\s*:/.test(line) && !/^\s{4,}/.test(line)) {
+        inModelsMap = false;
+      }
+    }
+    if (!inModelsMap || !/^\s{4,}/.test(line)) {
+      const bm = line.match(/^\s*base_url\s*:\s*(.*)$/);
+      if (bm) current.baseUrl = stripScalar(bm[1]);
+      const mm = line.match(/^\s*model\s*:\s*(.*)$/);
+      if (mm) current.model = stripScalar(mm[1]);
+      const kem = line.match(/^\s*key_env\s*:\s*(.*)$/);
+      if (kem) current.keyEnv = stripScalar(kem[1]);
+      const apim = line.match(/^\s*api_mode\s*:\s*(.*)$/);
+      if (apim) current.apiMode = stripScalar(apim[1]);
+    }
+  }
+  finish();
+  return result;
+}
+
+function renderCustomProvidersBlock(
+  entries: CustomProviderModelEntry[],
+): string {
+  if (entries.length === 0) return "";
+  const lines: string[] = ["custom_providers:"];
+  for (const e of entries) {
+    lines.push(`- name: ${yamlQuote(e.name)}`);
+    lines.push(`  base_url: ${yamlQuote(e.baseUrl)}`);
+    if (e.keyEnv) lines.push(`  key_env: ${yamlQuote(e.keyEnv)}`);
+    if (e.apiMode) lines.push(`  api_mode: ${yamlQuote(e.apiMode)}`);
+    if (e.model) lines.push(`  model: ${yamlQuote(e.model)}`);
+    const extras = e.extraModels.filter((m) => m && m !== e.model);
+    if (extras.length > 0) {
+      lines.push("  models:");
+      for (const id of extras) {
+        lines.push(`    ${id}:`);
+      }
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
+/** Locate the `custom_providers:` block span (header through last indented body). */
+function findCustomProvidersSpan(
+  content: string,
+): { start: number; end: number } | null {
+  const header = content.match(
+    /^custom_providers[^\S\r\n]*:[^\S\r\n]*(#.*)?\r?\n/m,
+  );
+  if (!header || header.index === undefined) return null;
+  if (header.index > 0 && content[header.index - 1] !== "\n") return null;
+  const start = header.index;
+  let offset = start + header[0].length;
+  const lines = content.slice(offset).split(/(?<=\n)/);
+  let end = offset;
+  for (const line of lines) {
+    const text = line.replace(/\r?\n$/, "");
+    const isBlank = /^\s*$/.test(text);
+    if (!isBlank && !/^[ \t]/.test(text) && !/^\s*-\s/.test(text)) break;
+    end = offset + line.length;
+    offset += line.length;
+  }
+  return { start, end };
+}
+
+function writeCustomProvidersBlock(
+  profile: string | undefined,
+  entries: CustomProviderModelEntry[],
+): void {
+  const { file, content } = readConfig(profile);
+  const block = renderCustomProvidersBlock(entries);
+  const span = findCustomProvidersSpan(content);
+  if (span) {
+    const next =
+      content.slice(0, span.start) + block + content.slice(span.end);
+    // Drop an empty block entirely when no entries remain.
+    if (!block) {
+      safeWriteFile(file, content.slice(0, span.start) + content.slice(span.end));
+      return;
+    }
+    if (next === content) return;
+    safeWriteFile(file, next);
+    return;
+  }
+  if (!block) return;
+  const sep = content === "" || content.endsWith("\n") ? "" : "\n";
+  safeWriteFile(file, `${content}${sep}${block}`);
+}
+
+/**
+ * Upsert a model id into config.yaml `custom_providers:` so the strict chat
+ * ModelPicker ([[src/main/models.ts#listConfiguredAgentModels]]) can see models
+ * added from the Providers UI (which also writes models.json).
+ *
+ * First model for an endpoint becomes `model:`; additional ids land under the
+ * nested `models:` map — matching what `loadCustomProviders` reads.
+ */
+export function upsertAgentCustomProviderModel(
+  profile: string | undefined,
+  input: {
+    name: string;
+    baseUrl: string;
+    keyEnv?: string;
+    model: string;
+    apiMode?: string | null;
+  },
+): void {
+  const name = (input.name || "").trim();
+  const baseUrl = (input.baseUrl || "").trim();
+  const model = (input.model || "").trim();
+  if (!name || !baseUrl || !model) return;
+
+  const { content } = readConfig(profile);
+  const entries = parseCustomProviderModelEntries(content);
+  const targetUrl = normUrl(baseUrl);
+  let entry = entries.find(
+    (e) => e.name === name && normUrl(e.baseUrl) === targetUrl,
+  );
+  if (!entry) {
+    entry = entries.find((e) => e.name === name);
+  }
+  if (!entry) {
+    entries.push({
+      name,
+      baseUrl,
+      keyEnv: (input.keyEnv || "").trim(),
+      model,
+      extraModels: [],
+      apiMode: (input.apiMode || "").trim(),
+    });
+    writeCustomProvidersBlock(profile, entries);
+    return;
+  }
+
+  entry.baseUrl = baseUrl;
+  if (input.keyEnv?.trim()) entry.keyEnv = input.keyEnv.trim();
+  if (input.apiMode) entry.apiMode = input.apiMode.trim();
+  else if (input.apiMode === null) entry.apiMode = "";
+
+  if (entry.model === model || entry.extraModels.includes(model)) {
+    let changed = false;
+    if (entry.baseUrl !== baseUrl) {
+      entry.baseUrl = baseUrl;
+      changed = true;
+    }
+    if (input.keyEnv?.trim() && entry.keyEnv !== input.keyEnv.trim()) {
+      entry.keyEnv = input.keyEnv.trim();
+      changed = true;
+    }
+    if (!changed) return;
+    writeCustomProvidersBlock(profile, entries);
+    return;
+  }
+  if (!entry.model) {
+    entry.model = model;
+  } else if (!entry.extraModels.includes(model)) {
+    entry.extraModels.push(model);
+  }
+  writeCustomProvidersBlock(profile, entries);
+}
+
+/**
+ * Remove a model id from a `custom_providers:` entry. Leaves the entry's
+ * name/base_url/key_env intact when no models remain (provider identity is
+ * owned by the `providers:` dict).
+ */
+export function removeAgentCustomProviderModel(
+  profile: string | undefined,
+  input: { name: string; model: string; baseUrl?: string },
+): void {
+  const name = (input.name || "").trim();
+  const model = (input.model || "").trim();
+  if (!name || !model) return;
+
+  const { content } = readConfig(profile);
+  const entries = parseCustomProviderModelEntries(content);
+  const targetUrl = input.baseUrl ? normUrl(input.baseUrl) : "";
+  const entry = entries.find(
+    (e) =>
+      e.name === name &&
+      (!targetUrl || normUrl(e.baseUrl) === targetUrl),
+  );
+  if (!entry) return;
+
+  if (entry.model === model) {
+    entry.model = entry.extraModels.shift() || "";
+  } else {
+    entry.extraModels = entry.extraModels.filter((m) => m !== model);
+  }
+  writeCustomProvidersBlock(profile, entries);
+}
+
+/**
+ * Remove a legacy `custom_providers:` list item by display name. Needed when
+ * the user deletes a terminal-added provider from the desktop UI — leaving the
+ * list item behind would re-import it on the next read.
+ */
+export function removeAgentCustomProviderEntry(
+  profile: string | undefined,
+  name: string,
+): void {
+  const { file, content } = readConfig(profile);
+  if (!content) return;
+  const header = content.match(
+    /^custom_providers[^\S\r\n]*:[^\S\r\n]*(#.*)?\r?\n/m,
+  );
+  if (!header || header.index === undefined) return;
+  if (header.index > 0 && content[header.index - 1] !== "\n") return;
+
+  const bodyStart = header.index + header[0].length;
+  const lines = content.slice(bodyStart).split(/(?<=\n)/);
+  const target = (name || "").trim();
+  let offset = bodyStart;
+  let itemStart = -1;
+  let itemEnd = -1;
+  let itemMatches = false;
+
+  for (const line of lines) {
+    const text = line.replace(/\r?\n$/, "");
+    const isBlank = /^\s*$/.test(text);
+    if (!isBlank && !/^[ \t]/.test(text)) break; // next top-level key
+    if (/^\s*-\s/.test(text)) {
+      if (itemMatches) break; // matched item fully scanned
+      itemStart = offset;
+      itemEnd = offset + line.length;
+      const nm = text.match(/-\s*name\s*:\s*(.*)$/);
+      itemMatches = !!nm && stripScalar(nm[1]) === target;
+    } else if (itemStart !== -1 && !isBlank) {
+      const nm = text.match(/^\s*name\s*:\s*(.*)$/);
+      if (nm && stripScalar(nm[1]) === target) itemMatches = true;
+      itemEnd = offset + line.length;
+    }
+    offset += line.length;
+  }
+  if (!itemMatches || itemStart === -1) return;
+  safeWriteFile(file, content.slice(0, itemStart) + content.slice(itemEnd));
+}
