@@ -7,9 +7,8 @@ import tailwindcss from "@tailwindcss/vite";
 const configDir = dirname(fileURLToPath(import.meta.url));
 const runtimeClientEntry = resolve(
   configDir,
-  "../../packages/runtime-client-ts/src/index.ts",
+  "packages/runtime-client-ts/src/index.ts",
 );
-const monorepoRoot = resolve(configDir, "../..");
 
 const rendererPort = Number(process.env.HERMES_DESKTOP_RENDERER_PORT || 0);
 
@@ -20,7 +19,7 @@ export default defineConfig({
   main: {
     resolve: {
       alias: {
-        // Bundle from TS source (same as apps/desktop). Do NOT add a package.json
+        // Bundle from vendored TS source. Do NOT add a package.json
         // dependency — electron-vite would externalize it and Electron would load
         // raw ESM .ts without extensions (ERR_MODULE_NOT_FOUND).
         "@smc/runtime-client": runtimeClientEntry,
@@ -28,7 +27,7 @@ export default defineConfig({
     },
     server: {
       fs: {
-        allow: [configDir, monorepoRoot],
+        allow: [configDir],
       },
     },
     build: {

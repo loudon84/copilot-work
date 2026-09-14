@@ -12,6 +12,7 @@ out/
 # Typecheck must use `tsc --noEmit`; runtime build writes to out/dist only.
 src/**/*.js
 src/**/*.d.ts
+!packages/runtime-client-ts/src/generated/schema.d.ts
 !src/main/env.d.ts
 !src/main/ws.d.ts
 !src/preload/index.d.ts

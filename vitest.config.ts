@@ -8,7 +8,7 @@ export default defineConfig({
       "@shared": resolve(__dirname, "src/shared"),
       "@smc/runtime-client": resolve(
         __dirname,
-        "../../packages/runtime-client-ts/src/index.ts",
+        "packages/runtime-client-ts/src/index.ts",
       ),
     },
   },

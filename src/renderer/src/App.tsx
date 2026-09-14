@@ -22,7 +22,7 @@ import type { HermesRuntimeProbe } from "../../shared/runtime/runtime-contract";
 // @lat: [[runtime-connection#Startup]]
 type AppScreen = "splash" | "login" | "main" | "connection-error";
 
-const SPLASH_MIN_MS = 3000;
+const SPLASH_MIN_MS = import.meta.env.MODE === "test" ? 0 : 3000;
 
 function skipPortalLogin(): boolean {
   return (
@@ -136,6 +136,17 @@ function AppBootstrap(): React.JSX.Element {
   useEffect(() => {
     void runBootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Portal logout (UserCenter → desktopAuth.logout) must return the shell to
+  // LoginScreen without depending on Hermes accountLogout.
+  useEffect(() => {
+    if (skipPortalLogin()) return;
+    return window.desktopAuth.onStateChanged((state) => {
+      if (!state.authenticated) {
+        setScreen((current) => (current === "main" ? "login" : current));
+      }
+    });
   }, []);
 
   useEffect(() => {
