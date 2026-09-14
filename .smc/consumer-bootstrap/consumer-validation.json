@@ -1,0 +1,51 @@
+{
+  "checks": [
+    {
+      "detail": "26/26 present",
+      "id": "GES Runtime",
+      "verdict": "PASS"
+    },
+    {
+      "detail": "scaffold=PASS provider=UNAVAILABLE",
+      "id": "Spec Kit",
+      "verdict": "PASS"
+    },
+    {
+      "detail": "layer=PASS required_method_ok=True",
+      "id": "Superpowers",
+      "verdict": "PASS"
+    },
+    {
+      "detail": "spec-superpower-ges.json + smc-prd-grounding",
+      "id": "Spec -> Plan handoff",
+      "verdict": "PASS"
+    },
+    {
+      "detail": "validator + delivery self-test entrypoints",
+      "id": "Plan -> Delivery",
+      "verdict": "PASS"
+    },
+    {
+      "detail": ".agents/skills/smc-plan-delivery/scripts/evidence.py",
+      "id": "Evidence",
+      "verdict": "PASS"
+    },
+    {
+      "detail": "install lock/receipt + governance-policy.json",
+      "id": "Release Governance",
+      "verdict": "PASS"
+    }
+  ],
+  "claims": {
+    "ges": "GES_NATIVE",
+    "spec_kit_provider": "NATIVE_ONLY",
+    "spec_kit_scaffold": "ADAPTER_READY",
+    "superpowers_pinned": "UPSTREAM_PINNED",
+    "superpowers_shims": "GES_NATIVE"
+  },
+  "code": "CONSUMER_VALIDATION_PASS",
+  "ok": true,
+  "project": "E:\\git\\smc-copilot-desktop",
+  "schema": "smc.ges.consumer-validation.v1",
+  "validated_at": "2026-09-14T04:25:53Z"
+}

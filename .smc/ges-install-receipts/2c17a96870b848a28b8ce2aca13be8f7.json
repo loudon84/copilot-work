@@ -1,0 +1,58 @@
+{
+  "backup_id": "2c17a96870b848a28b8ce2aca13be8f7",
+  "bundle": "5.0.0",
+  "domains": {
+    "backend": {
+      "sha256": "",
+      "version": "2.2.0"
+    },
+    "frontend": {
+      "sha256": "",
+      "version": "2.2.0"
+    },
+    "ops": {
+      "sha256": "",
+      "version": "2.2.0"
+    }
+  },
+  "finalized_at": "2026-09-14T04:18:41Z",
+  "install_id": "2c17a96870b848a28b8ce2aca13be8f7",
+  "managed_file_set_sha256": "sha256:bdd4da2beb3016056a87fe50f228ca06571458fde349dd719857f4a57ca5e97d",
+  "policy_digest": "sha256:b4892123cee54fb1722703d1de914dc002c3bb5692c8d7ee35acc478ab8145bf",
+  "profile": {
+    "id": "generic",
+    "sha256": "d69743486151e400a1aa45f07952e7be09396808e249beac843bb948da23b760",
+    "version": "2.0.0"
+  },
+  "release_identity": {
+    "installer_sha256": "d92d8ddb40904239bb1b3e8307044f938d40f9dcc561ccdd5819e7f480e8f5c1",
+    "package_file_count": 307,
+    "package_manifest_sha256": "b79ada33ee1a362306e6d1f7056e36e582b303b8bde5392a6ff90a015e6bd1a1",
+    "release_eligible": true,
+    "source_commit": "c2d90899f90ddc2dfd683c1ec0e542c1ce9d1714",
+    "source_tree_dirty": false
+  },
+  "schema": "smc.ges.install-receipt.v1",
+  "stale_reconciliation": {
+    "blocked": [],
+    "deleted": [
+      ".agents/ges/domain-packs/backend/activation.json",
+      ".agents/ges/domain-packs/backend/pack.json",
+      ".agents/ges/domain-packs/backend/policy-lock.json",
+      ".agents/ges/domain-packs/frontend/README.md",
+      ".agents/ges/domain-packs/frontend/activation.json",
+      ".agents/ges/domain-packs/frontend/pack.json",
+      ".agents/ges/domain-packs/frontend/policy-lock.json",
+      ".agents/ges/domain-packs/frontend/upstream-sources.md",
+      ".agents/ges/domain-packs/ops/activation.json",
+      ".agents/ges/domain-packs/ops/pack.json",
+      ".agents/ges/domain-packs/ops/policy-lock.json",
+      ".agents/ges/domain-packs/registry.json",
+      ".agents/ges/profile.json"
+    ]
+  },
+  "validation": {
+    "commands_digest": "sha256:62c0b7d9da9fe654beed269674bd074df2ea1f38660c0729fc6f4bd9c97e1608",
+    "status": "PASS"
+  }
+}

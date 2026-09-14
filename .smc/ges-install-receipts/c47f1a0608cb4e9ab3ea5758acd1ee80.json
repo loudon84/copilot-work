@@ -1,0 +1,44 @@
+{
+  "backup_id": "c47f1a0608cb4e9ab3ea5758acd1ee80",
+  "bundle": "5.0.0",
+  "domains": {
+    "backend": {
+      "sha256": "e30b715b6ce81c9f74dc9fe520484909887ef8f3ee5bb5c63a360aca528aa13e",
+      "version": "2.2.0"
+    },
+    "frontend": {
+      "sha256": "c0331cc25d4e5071bc155a97dc3e87c8f95d6fec2ef57794acd3973096d36d32",
+      "version": "2.2.0"
+    },
+    "ops": {
+      "sha256": "ae6e6b46fdba8153eef6677d395acf494e66bb25595fa4ee0a427a5aadfc5fc3",
+      "version": "2.2.0"
+    }
+  },
+  "finalized_at": "2026-09-14T04:25:26Z",
+  "install_id": "c47f1a0608cb4e9ab3ea5758acd1ee80",
+  "managed_file_set_sha256": "sha256:33be49f2305c3c0707f79c8f5fc8f3583fc61d020a368ac3cd0800838129996c",
+  "policy_digest": "sha256:b4892123cee54fb1722703d1de914dc002c3bb5692c8d7ee35acc478ab8145bf",
+  "profile": {
+    "id": "generic",
+    "sha256": "d69743486151e400a1aa45f07952e7be09396808e249beac843bb948da23b760",
+    "version": "2.0.0"
+  },
+  "release_identity": {
+    "installer_sha256": "d92d8ddb40904239bb1b3e8307044f938d40f9dcc561ccdd5819e7f480e8f5c1",
+    "package_file_count": 307,
+    "package_manifest_sha256": "b79ada33ee1a362306e6d1f7056e36e582b303b8bde5392a6ff90a015e6bd1a1",
+    "release_eligible": true,
+    "source_commit": "c2d90899f90ddc2dfd683c1ec0e542c1ce9d1714",
+    "source_tree_dirty": false
+  },
+  "schema": "smc.ges.install-receipt.v1",
+  "stale_reconciliation": {
+    "blocked": [],
+    "deleted": []
+  },
+  "validation": {
+    "commands_digest": "sha256:63f7cfa62315f312f2c42fa6b1c50f99b46471ee7453c982a42fcdaa9b6b5609",
+    "status": "PASS"
+  }
+}

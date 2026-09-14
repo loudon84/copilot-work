@@ -14,9 +14,9 @@
       "version": "2.2.0"
     }
   },
-  "install_receipt_path": ".smc/ges-install-receipts/ba278f956cde46f7a53d4ed7c7390277.json",
-  "install_receipt_sha256": "sha256:d109cb868175f845562a6934a5e3041ccabb6329da5884623546b5b204376169",
-  "installed_at": "2026-09-14T03:06:49Z",
+  "install_receipt_path": ".smc/ges-install-receipts/c47f1a0608cb4e9ab3ea5758acd1ee80.json",
+  "install_receipt_sha256": "sha256:bf02f958867224774ccf2c5c587e21e0270185ed90217152c8213eedc73d0fff",
+  "installed_at": "2026-09-14T04:25:26Z",
   "owned_files": [
     {
       "installed_sha256": "a093f43a0023fb6795b79e6c1c39b4458cc2fa948abfb19e5791be89f2f45dc3",
@@ -691,11 +691,11 @@
   },
   "release_identity": {
     "installer_sha256": "d92d8ddb40904239bb1b3e8307044f938d40f9dcc561ccdd5819e7f480e8f5c1",
-    "package_file_count": 279,
-    "package_manifest_sha256": "42cb79fc283ea987af78406e41883f2a705b522cf1924fbb6f6b675d1dba323f",
-    "release_eligible": false,
-    "source_commit": "849b775d0c34b16126cbe0b9c12043fe250e4f9b",
-    "source_tree_dirty": true
+    "package_file_count": 307,
+    "package_manifest_sha256": "b79ada33ee1a362306e6d1f7056e36e582b303b8bde5392a6ff90a015e6bd1a1",
+    "release_eligible": true,
+    "source_commit": "c2d90899f90ddc2dfd683c1ec0e542c1ce9d1714",
+    "source_tree_dirty": false
   },
   "schema": "smc.ges.install-lock.v2"
 }

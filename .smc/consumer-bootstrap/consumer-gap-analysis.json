@@ -1,0 +1,63 @@
+{
+  "analyzed_at": "2026-09-14T04:18:55Z",
+  "audit_schema": "smc.ges.consumer-audit.v1",
+  "claims": {
+    "ges": "UNAVAILABLE",
+    "spec_kit_provider": "NATIVE_ONLY",
+    "spec_kit_scaffold": "UNAVAILABLE",
+    "superpowers_pinned": "GES_NATIVE",
+    "superpowers_shims": "GES_NATIVE"
+  },
+  "codes": [
+    "GES_CAPABILITY_GAP",
+    "LAYER_PARTIAL:ges",
+    "SPEC_KIT_PROVIDER_UNAVAILABLE",
+    "LAYER_MISSING:spec_kit",
+    "SUPERPOWERS_CAPABILITY_GAP",
+    "LAYER_PARTIAL:superpowers",
+    "CONSUMER_GAP_PRESENT"
+  ],
+  "layers": {
+    "ges": {
+      "missing": [
+        "ges.profile",
+        "ges.domain_registry"
+      ],
+      "notes": [],
+      "present": 24,
+      "total": 26,
+      "verdict": "PARTIAL"
+    },
+    "spec_kit": {
+      "missing": [
+        "spec_kit.specify.constitution.md",
+        "spec_kit.specify.templates",
+        "spec_kit.specify.scripts",
+        "spec_kit.specify.specs.README.md"
+      ],
+      "notes": [
+        "provider_status=UNAVAILABLE",
+        "integration_status=NATIVE_ONLY"
+      ],
+      "present": 0,
+      "total": 4,
+      "verdict": "MISSING"
+    },
+    "superpowers": {
+      "missing": [
+        "superpowers.pinned.test-driven-development",
+        "superpowers.pinned.systematic-debugging",
+        "superpowers.shim.brainstorming",
+        "superpowers.shim.writing-plans",
+        "superpowers.shim.finishing-branch"
+      ],
+      "notes": [],
+      "present": 3,
+      "total": 8,
+      "verdict": "PARTIAL"
+    }
+  },
+  "ok": false,
+  "project": "E:\\git\\smc-copilot-desktop",
+  "schema": "smc.ges.consumer-gap.v1"
+}

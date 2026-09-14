@@ -1,0 +1,26 @@
+{
+  "backup_id": null,
+  "bootstrap_id": "cb8dce745c494f009238ec8e0a99398f",
+  "files": [],
+  "finalized_at": "2026-09-14T04:06:20Z",
+  "project": "E:\\git\\smc-copilot-desktop",
+  "remediation_plan_sha256": "sha256:83d8fc11358e82a52ae1fd24dbc9e8e54ab87d20e0506b9dd41dc03414993609",
+  "schema": "smc.ges.consumer-bootstrap-receipt.v1",
+  "skipped": [
+    "SK-014:MANUAL:specify",
+    "WOULD_WRITE:.specify/constitution.md",
+    "WOULD_WRITE:.specify/templates/.gitkeep",
+    "WOULD_WRITE:.specify/scripts/.gitkeep",
+    "WOULD_WRITE:.specify/specs/README.md",
+    "WOULD_WRITE:.agents/skills/brainstorming/SKILL.md",
+    "WOULD_WRITE:.agents/skills/writing-plans/SKILL.md",
+    "WOULD_WRITE:.agents/skills/finishing-branch/SKILL.md",
+    "WOULD_WRITE:.agents/skills/systematic-debugging/SKILL.md",
+    "WOULD_WRITE:.agents/skills/test-driven-development/SKILL.md",
+    "WOULD_WRITE:.agents/ges/spec-kit-binding.json",
+    "WOULD_WRITE:.agents/ges/superpowers-binding.json",
+    "WOULD_WRITE:.agents/ges/governance-policy.json",
+    "WOULD_WRITE:.agents/ges/spec-superpower-ges.json"
+  ],
+  "status": "DRY_RUN"
+}
