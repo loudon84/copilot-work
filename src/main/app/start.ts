@@ -18,6 +18,7 @@ import {
 } from "../security";
 import { registerIpcHandlers } from "../ipc/register";
 import { registerAuthIpc } from "../auth/auth-ipc";
+import { registerDesktopCapabilitiesIpc } from "../desktop-capabilities-ipc";
 import {
   disposeExpertSubsystem,
   registerExpertIpc,
@@ -77,6 +78,7 @@ export function startMainProcess(): void {
     requestQuit,
   });
   registerAuthIpc({ getMainWindow: () => mainWindow });
+  registerDesktopCapabilitiesIpc();
   // Construct Expert singleton before registering its IPC surface.
   void getExpertRunService();
   registerExpertIpc({ getMainWindow: () => mainWindow });

@@ -1,0 +1,426 @@
+{
+  "acceptance_contract": "smc.acceptance.v1",
+  "ambient_fingerprint": "sha256:e07773bbd95da9cb9453bc669a17fdef49e5c3f053528df76abc750bcb699430",
+  "blocking_claims": [
+    {
+      "claim_id": "CLM-01",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "AC-01",
+      "result": "PASS",
+      "verification_ids": [
+        "V01"
+      ]
+    },
+    {
+      "claim_id": "CLM-02",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "AC-02",
+      "result": "PASS",
+      "verification_ids": [
+        "V02"
+      ]
+    },
+    {
+      "claim_id": "CLM-03",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "auth-ipc.test.ts",
+      "requirement": "AC-03",
+      "result": "PASS",
+      "verification_ids": [
+        "V03"
+      ]
+    },
+    {
+      "claim_id": "CLM-04",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "AC-04",
+      "result": "PASS",
+      "verification_ids": [
+        "V04"
+      ]
+    },
+    {
+      "claim_id": "CLM-05",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "ProfileSwitcher.test.tsx",
+      "requirement": "AC-05",
+      "result": "PASS",
+      "verification_ids": [
+        "V05"
+      ]
+    },
+    {
+      "claim_id": "CLM-06",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "tests/profiles.test.ts",
+      "requirement": "AC-06",
+      "result": "PASS",
+      "verification_ids": [
+        "V06"
+      ]
+    },
+    {
+      "claim_id": "CLM-07",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "AC-07",
+      "result": "PASS",
+      "verification_ids": [
+        "V07"
+      ]
+    },
+    {
+      "claim_id": "CLM-08",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "AC-08",
+      "result": "PASS",
+      "verification_ids": [
+        "V08"
+      ]
+    },
+    {
+      "claim_id": "CLM-09",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": ".smc/runs/UC-PROFILE-GOV/review/prd-review-closure.md",
+      "requirement": "DOD-01",
+      "result": "PASS",
+      "verification_ids": [
+        "V09"
+      ]
+    },
+    {
+      "claim_id": "CLM-10",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "prd_profile + preplan scan",
+      "requirement": "DOD-02",
+      "result": "PASS",
+      "verification_ids": [
+        "V09"
+      ]
+    },
+    {
+      "claim_id": "CLM-11",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "DOD-03",
+      "result": "PASS",
+      "verification_ids": [
+        "V09"
+      ]
+    },
+    {
+      "claim_id": "CLM-12",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "DOD-04",
+      "result": "PASS",
+      "verification_ids": [
+        "V01",
+        "V03",
+        "V05"
+      ]
+    },
+    {
+      "claim_id": "CLM-13",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "DOD-05",
+      "result": "PASS",
+      "verification_ids": [
+        "V04",
+        "V06"
+      ]
+    },
+    {
+      "claim_id": "CLM-14",
+      "evidence_action": "NEW_EVIDENCE",
+      "prior_evidence": "none",
+      "requirement": "DOD-06",
+      "result": "PASS",
+      "verification_ids": [
+        "V10"
+      ]
+    }
+  ],
+  "blocking_verifications": [
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-01",
+        "CLM-12"
+      ],
+      "claim_results": {
+        "CLM-01": "PASS",
+        "CLM-12": "PASS"
+      },
+      "command": "cmd /c npx vitest run src/renderer/src/screens/Layout/UserCenter.test.tsx",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094519.721058Z-V01.log",
+      "raw_log_sha256": "sha256:46ef4deaf170eac360fb83d7403fb029d4e66edc89147bdea24628264494bc5e",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:19.721058Z",
+      "verification_id": "V01"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-02"
+      ],
+      "claim_results": {
+        "CLM-02": "PASS"
+      },
+      "command": "cmd /c npx vitest run src/renderer/src/screens/Layout/UserCenter.test.tsx",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094525.013294Z-V02.log",
+      "raw_log_sha256": "sha256:e9ec48d4a7c9060ac51a9470acea9af3aaf1ccda171bd9dc67510c53018b2517",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:25.013294Z",
+      "verification_id": "V02"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-03",
+        "CLM-12"
+      ],
+      "claim_results": {
+        "CLM-03": "PASS",
+        "CLM-12": "PASS"
+      },
+      "command": "cmd /c npx vitest run src/renderer/src/App.test.tsx",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094532.017087Z-V03.log",
+      "raw_log_sha256": "sha256:2360e748134935c32e3d96452f1a00a5c27df902d1cf08f3351a04c41e5ea6a6",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:32.017087Z",
+      "verification_id": "V03"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-04",
+        "CLM-13"
+      ],
+      "claim_results": {
+        "CLM-04": "PASS",
+        "CLM-13": "PASS"
+      },
+      "command": "python -c 'import pathlib,sys; needles=('\"'\"'AuthService'\"'\"','\"'\"'UserStoreV2'\"'\"','\"'\"'/api/user/me'\"'\"'); hits=[f'\"'\"'{p}:{i}'\"'\"' for p in pathlib.Path('\"'\"'src'\"'\"').rglob('\"'\"'*'\"'\"') if p.suffix in ('\"'\"'.ts'\"'\"','\"'\"'.tsx'\"'\"') and '\"'\"'node_modules'\"'\"' not in p.parts for i,l in enumerate(p.read_text(encoding='\"'\"'utf-8'\"'\"', errors='\"'\"'ignore'\"'\"').splitlines(),1) if any(n in l for n in needles)]; print(chr(10).join(hits)); sys.exit(1 if hits else 0)'",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_TRANSIENT",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094538.643563Z-V04.log",
+      "raw_log_sha256": "sha256:112d004bf67ff2f954d233fe1b5896d86e181e7fc7c9a304896844540519fffc",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:38.643563Z",
+      "verification_id": "V04"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-05",
+        "CLM-12"
+      ],
+      "claim_results": {
+        "CLM-05": "PASS",
+        "CLM-12": "PASS"
+      },
+      "command": "cmd /c npx vitest run src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094541.978628Z-V05.log",
+      "raw_log_sha256": "sha256:35fa85fe7fc627a91e5ed250f73fc240c7c05bbcfb12b9c72a3e03157923a73f",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:41.978628Z",
+      "verification_id": "V05"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-06",
+        "CLM-13"
+      ],
+      "claim_results": {
+        "CLM-06": "PASS",
+        "CLM-13": "PASS"
+      },
+      "command": "cmd /c npx vitest run tests/profiles.test.ts",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094548.538022Z-V06.log",
+      "raw_log_sha256": "sha256:86069d1df015fba3ac1c2aec46c379d1ffebcd9cf2f8f0abca7a6991c35275f0",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:48.538022Z",
+      "verification_id": "V06"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-07"
+      ],
+      "claim_results": {
+        "CLM-07": "PASS"
+      },
+      "command": "cmd /c npx vitest run src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094556.128064Z-V07.log",
+      "raw_log_sha256": "sha256:87b9eff4652a60a0dc21ee23d9f6dfe941e609bd27405052cf323914ae4b81ca",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:45:56.128064Z",
+      "verification_id": "V07"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-08"
+      ],
+      "claim_results": {
+        "CLM-08": "PASS"
+      },
+      "command": "cmd /c npx vitest run src/renderer/src/App.test.tsx src/renderer/src/screens/Layout/UserCenter.test.tsx src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx tests/profiles.test.ts",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_TRANSIENT",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094602.178608Z-V08.log",
+      "raw_log_sha256": "sha256:5cbb7d5d64be4af5d2e474c8d9c017610cd21b7f28230e0262308efc928e013a",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:46:02.178608Z",
+      "verification_id": "V08"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-09",
+        "CLM-10",
+        "CLM-11"
+      ],
+      "claim_results": {
+        "CLM-09": "PASS",
+        "CLM-10": "PASS",
+        "CLM-11": "PASS"
+      },
+      "command": "python .agents/skills/smc-plan-validator/scripts/validate_plan_current.py plans/UC-PROFILE-GOV.plan.md",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_TRANSIENT",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094609.108180Z-V09.log",
+      "raw_log_sha256": "sha256:40c395cc30a193a0635ad5b9d9590574ce6fa32f05f7efccd03896f818a1d498",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:46:09.108180Z",
+      "verification_id": "V09"
+    },
+    {
+      "acceptance_mode": "LOCAL",
+      "candidate_id": null,
+      "claim_ids": [
+        "CLM-14"
+      ],
+      "claim_results": {
+        "CLM-14": "PASS"
+      },
+      "command": "python .agents/skills/smc-plan-delivery/scripts/completion_audit.py check --plan plans/UC-PROFILE-GOV.plan.md",
+      "evidence_action": "NEW_EVIDENCE",
+      "exit_code": 0,
+      "inherited": false,
+      "policy": "LOCAL_DURABLE",
+      "raw_log_ref": ".smc/evidence/UC-PROFILE-GOV/logs/20260914T094612.110625Z-V10.log",
+      "raw_log_sha256": "sha256:ad8ee30d30ce77057dbb84f9f642781c1c38cbb0520afe570eba23aac785b90b",
+      "result": "PASS",
+      "source_manifest": null,
+      "source_manifest_sha256": null,
+      "source_verification_id": null,
+      "timestamp": "2026-09-14T09:46:12.110625Z",
+      "verification_id": "V10"
+    }
+  ],
+  "completion_audit": {
+    "changed": 10,
+    "deferred": 0,
+    "done": 4,
+    "scope_drift": 0,
+    "timestamp": "2026-09-14T09:45:14.582264Z",
+    "total_items": 4,
+    "unverifiable": 0,
+    "verdict": "PASS"
+  },
+  "generated_at": "2026-09-14T09:54:59.410497Z",
+  "implementation_review": {
+    "reviewer": "delivery-agent",
+    "scope_fingerprint": "sha256:a17c44d7a53f3f7d07217f307b9ff9fbe8ae7bc003eba4b152bc810155367a0e",
+    "timestamp": "2026-09-14T09:45:14.922674Z",
+    "verdict": "PASS"
+  },
+  "payload_sha256": "sha256:4840370505d97125c89ec4732ee74b3efd10644343969aa902b3bd6bc06ac57a",
+  "plan": "plans/UC-PROFILE-GOV.plan.md",
+  "plan_id": "UC-PROFILE-GOV",
+  "plan_review": {
+    "plan_sha256": "sha256:cbf3465bcb5a6005da5b42d188d04771f6cf2d5eac726588424a6b01032fd22a",
+    "reviewer": "delivery-agent",
+    "timestamp": "2026-09-14T09:45:10.120946Z",
+    "verdict": "PASS"
+  },
+  "schema": "smc.evidence.manifest.v3",
+  "scope_fingerprint": "sha256:a17c44d7a53f3f7d07217f307b9ff9fbe8ae7bc003eba4b152bc810155367a0e",
+  "test_assets": [],
+  "verification_candidate": null,
+  "workspace_base_commit": "fd6aae1a4319b0d7182747e08c9887df939b6ecf"
+}

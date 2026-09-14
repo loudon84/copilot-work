@@ -48,6 +48,7 @@ import {
 import { createFilesApi } from "./files-api";
 import { createExpertApi } from "./expert-api";
 import { createSkillRunApi } from "./skill-run-api";
+import { desktopCapabilitiesApi } from "./desktop-capabilities-api";
 import type { HermesFilesAPI } from "../shared/files";
 
 /**
@@ -1736,6 +1737,10 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld("electron", electronAPI);
     contextBridge.exposeInMainWorld("hermesAPI", hermesAPI);
     contextBridge.exposeInMainWorld("desktopAuth", authApi);
+    contextBridge.exposeInMainWorld(
+      "desktopCapabilities",
+      desktopCapabilitiesApi,
+    );
   } catch (error) {
     console.error(error);
   }
@@ -1746,4 +1751,6 @@ if (process.contextIsolated) {
   window.hermesAPI = hermesAPI;
   // @ts-ignore (define in dts)
   window.desktopAuth = authApi;
+  // @ts-ignore (define in dts)
+  window.desktopCapabilities = desktopCapabilitiesApi;
 }

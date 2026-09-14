@@ -1300,5 +1300,6 @@ declare global {
     electron: ElectronAPI;
     hermesAPI: HermesAPI;
     desktopAuth: import("../shared/auth/auth-contract").DesktopAuthAPI;
+    desktopCapabilities: import("./desktop-capabilities-api").DesktopCapabilitiesAPI;
   }
 }

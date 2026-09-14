@@ -3,6 +3,7 @@ import { Settings, Users, Check, Search } from "../../assets/icons";
 import { useI18n } from "../../components/useI18n";
 import ProfileAvatar from "../../components/common/ProfileAvatar";
 import { useProfileModal } from "../../components/profile/ProfileModalContext";
+import { getDesktopCapabilities } from "./desktopCapabilities";
 
 interface ProfileInfo {
   id: string;
@@ -31,9 +32,9 @@ interface ProfileSwitcherProps {
  * Sidebar-footer profile control, split into two affordances: the chip (avatar
  * + name) opens the current profile's edit modal, and a dedicated switch button
  * opens a command-palette-style picker to change the active profile. Collapsed,
- * the single avatar opens the picker. The picker also opens from anywhere via
- * Cmd/Ctrl+P: a fuzzy search field on top, running profiles grouped above a
- * "Stopped" section, each row showing its model in monospace and a running dot.
+ * the single avatar opens the picker when profileSwitch is enabled; otherwise it
+ * edits the current profile. Switch / picker / Cmd+P are gated by
+ * DesktopCapabilities.profileSwitch (Local default false). Profile Runtime stays.
  */
 export default function ProfileSwitcher({
   activeProfile,
@@ -47,6 +48,7 @@ export default function ProfileSwitcher({
   const [profiles, setProfiles] = useState<ProfileInfo[]>([]);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
+  const [profileSwitch, setProfileSwitch] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -67,10 +69,19 @@ export default function ProfileSwitcher({
     load();
   }, [load]);
 
-  // Cmd/Ctrl+P toggles the picker from anywhere. P is unbound in the app menu,
-  // so the renderer reliably receives it; preventDefault keeps the browser
-  // print dialog from stealing it.
   useEffect(() => {
+    let cancelled = false;
+    void getDesktopCapabilities().then((caps) => {
+      if (!cancelled) setProfileSwitch(caps.profileSwitch === true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Cmd/Ctrl+P toggles the picker only when profileSwitch is enabled.
+  useEffect(() => {
+    if (!profileSwitch) return;
     function onKey(e: KeyboardEvent): void {
       if (
         (e.metaKey || e.ctrlKey) &&
@@ -84,7 +95,7 @@ export default function ProfileSwitcher({
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [profileSwitch]);
 
   // Refresh + reset search/focus each time the picker opens — counts and the
   // gateway dot drift while it's closed.
@@ -145,9 +156,10 @@ export default function ProfileSwitcher({
   // Keep the highlighted row scrolled into view as the selection moves.
   useEffect(() => {
     if (!switchOpen) return;
-    listRef.current
-      ?.querySelector(".profile-menu-item.highlighted")
-      ?.scrollIntoView({ block: "nearest" });
+    const el = listRef.current?.querySelector(
+      ".profile-menu-item.highlighted",
+    ) as HTMLElement | null;
+    el?.scrollIntoView?.({ block: "nearest" });
   }, [highlight, switchOpen]);
 
   function onSearchKey(e: React.KeyboardEvent): void {
@@ -204,15 +216,28 @@ export default function ProfileSwitcher({
     );
   }
 
+  const openSwitcher = (): void => {
+    if (!profileSwitch) return;
+    setSwitchOpen(true);
+  };
+
   return (
     <>
       <div className={`profile-switcher ${compact ? "compact" : ""}`}>
         <button
           className="profile-switcher-trigger"
-          onClick={compact ? () => setSwitchOpen(true) : editCurrent}
+          onClick={
+            compact
+              ? profileSwitch
+                ? openSwitcher
+                : editCurrent
+              : editCurrent
+          }
           title={
             compact
-              ? t("agents.switchProfile")
+              ? profileSwitch
+                ? t("agents.switchProfile")
+                : t("agents.editAppearanceFor", { name: label })
               : t("agents.editAppearanceFor", { name: label })
           }
         >
@@ -224,10 +249,10 @@ export default function ProfileSwitcher({
           />
           {!compact && <span className="profile-switcher-name">{label}</span>}
         </button>
-        {!compact && (
+        {!compact && profileSwitch && (
           <button
             className="profile-switch-btn"
-            onClick={() => setSwitchOpen(true)}
+            onClick={openSwitcher}
             title={`${t("agents.switchProfile")} (${mod}P)`}
             aria-label={t("agents.switchProfile")}
           >
@@ -236,7 +261,7 @@ export default function ProfileSwitcher({
         )}
       </div>
 
-      {switchOpen && (
+      {profileSwitch && switchOpen && (
         <div
           className="profile-switch-overlay"
           onClick={() => setSwitchOpen(false)}

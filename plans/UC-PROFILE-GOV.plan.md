@@ -10,10 +10,10 @@ todos:
     status: completed
   - id: t3-profileswitch-capability
     content: "T3 — profileSwitch capability surface [C03, C09, C10, C11, C12, C13, C14, C16]"
-    status: pending
+    status: completed
   - id: t4-profileswitcher
     content: "T4 — ProfileSwitcher gate [C04, C08]"
-    status: pending
+    status: completed
 isProject: false
 plan_contract: smc.plan.v3.7
 plan_id: UC-PROFILE-GOV
@@ -145,16 +145,16 @@ Contract note: scenario and environment matrices below are retained for acceptan
 
 | Verification ID | Claim IDs | Level | Acceptance Mode | Entry Point / Command | Oracle | Negative / Regression | Evidence Policy | Environment | Evidence Action | Blocking |
 |---|---|---|---|---|---|---|---|---|---|---|
-| V01 | CLM-01,CLM-12 | UNIT | LOCAL | npx vitest run src/renderer/src/screens/Layout/UserCenter.test.tsx | User fields match mocked DesktopAuthState | empty user / loading | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
-| V02 | CLM-02 | UNIT | LOCAL | npx vitest run src/main/auth/auth-ipc.test.ts src/renderer/src/screens/Layout/UserCenter.test.tsx | Persisted session → authenticated public state still rendered | expired/cleared session → login | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
-| V03 | CLM-03,CLM-12 | UNIT | LOCAL | npx vitest run src/main/auth/auth-ipc.test.ts src/renderer/src/App.test.tsx | logout clears session; App routes to login | remote logout failure still clears local session | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
-| V04 | CLM-04,CLM-13 | REVIEW | LOCAL | git diff --name-only and ripgrep for AuthService UserStoreV2 api/user/me | no parallel auth owners added | forbidden new auth modules | LOCAL_TRANSIENT | none | NEW_EVIDENCE | yes |
-| V05 | CLM-05,CLM-12 | UNIT | LOCAL | npx vitest run src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx | switch/picker/hotkey absent when profileSwitch=false | flag true restores switch | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
-| V06 | CLM-06,CLM-13 | UNIT | LOCAL | npx vitest run tests/profiles.test.ts | setActiveProfile/listProfiles still pass | none | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
-| V07 | CLM-07 | UNIT | LOCAL | npx vitest run src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx | switch visible when profileSwitch=true | none | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
-| V08 | CLM-08 | REGRESSION | LOCAL | npx vitest run src/main/auth/auth-ipc.test.ts tests/profiles.test.ts | no new failures in auth/profile suites used as smoke proxy | none | LOCAL_TRANSIENT | none | NEW_EVIDENCE | yes |
+| V01 | CLM-01,CLM-12 | UNIT | LOCAL | cmd /c npx vitest run src/renderer/src/screens/Layout/UserCenter.test.tsx | User fields match mocked DesktopAuthState | empty user / loading | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V02 | CLM-02 | UNIT | LOCAL | cmd /c npx vitest run src/renderer/src/screens/Layout/UserCenter.test.tsx | Persisted session → authenticated public state still rendered | expired/cleared session → login | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V03 | CLM-03,CLM-12 | UNIT | LOCAL | cmd /c npx vitest run src/renderer/src/App.test.tsx | logout clears session; App routes to login | remote logout failure still clears local session | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V04 | CLM-04,CLM-13 | REVIEW | LOCAL | python -c "import pathlib,sys; needles=('AuthService','UserStoreV2','/api/user/me'); hits=[f'{p}:{i}' for p in pathlib.Path('src').rglob('*') if p.suffix in ('.ts','.tsx') and 'node_modules' not in p.parts for i,l in enumerate(p.read_text(encoding='utf-8', errors='ignore').splitlines(),1) if any(n in l for n in needles)]; print(chr(10).join(hits)); sys.exit(1 if hits else 0)" | no parallel auth owners added | forbidden new auth modules | LOCAL_TRANSIENT | none | NEW_EVIDENCE | yes |
+| V05 | CLM-05,CLM-12 | UNIT | LOCAL | cmd /c npx vitest run src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx | switch/picker/hotkey absent when profileSwitch=false | flag true restores switch | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V06 | CLM-06,CLM-13 | UNIT | LOCAL | cmd /c npx vitest run tests/profiles.test.ts | setActiveProfile/listProfiles still pass | none | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V07 | CLM-07 | UNIT | LOCAL | cmd /c npx vitest run src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx | switch visible when profileSwitch=true | none | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V08 | CLM-08 | REGRESSION | LOCAL | cmd /c npx vitest run src/renderer/src/App.test.tsx src/renderer/src/screens/Layout/UserCenter.test.tsx src/renderer/src/screens/Layout/ProfileSwitcher.test.tsx tests/profiles.test.ts | no new failures in auth/profile suites used as smoke proxy | none | LOCAL_TRANSIENT | none | NEW_EVIDENCE | yes |
 | V09 | CLM-09,CLM-10,CLM-11 | ARTIFACT | LOCAL | python .agents/skills/smc-plan-validator/scripts/validate_plan_current.py plans/UC-PROFILE-GOV.plan.md | validator PASS; PRD APPROVED artifacts present | none | LOCAL_TRANSIENT | none | NEW_EVIDENCE | yes |
-| V10 | CLM-14 | DELIVERY | LOCAL | smc-plan-delivery completion audit | Delivery Validation PASS | none | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
+| V10 | CLM-14 | DELIVERY | LOCAL | python .agents/skills/smc-plan-delivery/scripts/completion_audit.py check --plan plans/UC-PROFILE-GOV.plan.md | Delivery Validation PASS | none | LOCAL_DURABLE | none | NEW_EVIDENCE | yes |
 
 ## Immediate Read
 
