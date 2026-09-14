@@ -54,3 +54,11 @@ resources/work-build-info.json
 /*.bat
 /*.ps1
 .mcp.json
+
+# SMC governed delivery local state/evidence
+.smc/evidence/
+.smc/reviews/
+.smc/runs/
+.smc/skill-upgrade-backups/
+__pycache__/
+*.py[cod]
