@@ -1,9 +1,0 @@
-{
-  "bundle": "5.0.0",
-  "install_id": "c47f1a0608cb4e9ab3ea5758acd1ee80",
-  "install_receipt_sha256": "sha256:bf02f958867224774ccf2c5c587e21e0270185ed90217152c8213eedc73d0fff",
-  "installed_at": "2026-09-14T04:25:26Z",
-  "receipt_path": ".smc/ges-install-receipts/c47f1a0608cb4e9ab3ea5758acd1ee80.json",
-  "schema": "smc.ges.install-receipt.v1",
-  "transaction_status": "PASS"
-}
