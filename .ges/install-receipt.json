@@ -1,0 +1,702 @@
+{
+  "schema": "ges.install-receipt.v2",
+  "installed_at": "2026-09-16T10:33:16.290367+00:00",
+  "ges_version": "6.0.0-alpha.2",
+  "distribution_version": "1.2.1",
+  "transaction_id": "f180d054-6b70-4f0e-8081-9989738e2159",
+  "repo_identity": {
+    "path": "E:\\git\\smc-copilot-desktop-ges-a2-demo",
+    "kind": "brownfield",
+    "git_head": "737409b14e7499723db25fcb0414fa3e7026a86f"
+  },
+  "managed_artifacts": [
+    {
+      "path": ".agents/skills/codebase-design/DEEPENING.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+      "generated_hash": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.codebase-design"
+      ]
+    },
+    {
+      "path": ".agents/skills/codebase-design/DESIGN-IT-TWICE.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "8e740bf98446dbd4dfdc132ac4346d9a7eedaf93de6a495889171cf7f99f16bd",
+      "generated_hash": "8e740bf98446dbd4dfdc132ac4346d9a7eedaf93de6a495889171cf7f99f16bd",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.codebase-design"
+      ]
+    },
+    {
+      "path": ".agents/skills/codebase-design/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
+      "generated_hash": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.codebase-design"
+      ]
+    },
+    {
+      "path": ".agents/skills/codebase-design/agents/openai.yaml",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f",
+      "generated_hash": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.codebase-design"
+      ]
+    },
+    {
+      "path": ".agents/skills/domain-modeling/ADR-FORMAT.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+      "generated_hash": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.domain-modeling"
+      ]
+    },
+    {
+      "path": ".agents/skills/domain-modeling/CONTEXT-FORMAT.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "17ab16ce783e4d2801ee52fd9acdf550cbf44de65ae76797a93943bbedf22a13",
+      "generated_hash": "17ab16ce783e4d2801ee52fd9acdf550cbf44de65ae76797a93943bbedf22a13",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.domain-modeling"
+      ]
+    },
+    {
+      "path": ".agents/skills/domain-modeling/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "327a2b50620e2fd70abc6893cd6965e76b20f8d0adb0dc2c8d5eb3845efb643e",
+      "generated_hash": "327a2b50620e2fd70abc6893cd6965e76b20f8d0adb0dc2c8d5eb3845efb643e",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.domain-modeling"
+      ]
+    },
+    {
+      "path": ".agents/skills/domain-modeling/agents/openai.yaml",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b",
+      "generated_hash": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.domain-modeling"
+      ]
+    },
+    {
+      "path": ".agents/skills/finishing-a-development-branch/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "8db5a922b242dd4e1bf824cb91c13b3e8d8e8a86d6ceaf7f0774eb9cce909d65",
+      "generated_hash": "8db5a922b242dd4e1bf824cb91c13b3e8d8e8a86d6ceaf7f0774eb9cce909d65",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.finishing-a-development-branch"
+      ]
+    },
+    {
+      "path": ".agents/skills/grill-with-docs/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
+      "generated_hash": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.grill-with-docs"
+      ]
+    },
+    {
+      "path": ".agents/skills/grill-with-docs/agents/openai.yaml",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9",
+      "generated_hash": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.grill-with-docs"
+      ]
+    },
+    {
+      "path": ".agents/skills/grilling/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2",
+      "generated_hash": "10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.grilling"
+      ]
+    },
+    {
+      "path": ".agents/skills/grilling/agents/openai.yaml",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b",
+      "generated_hash": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.grilling"
+      ]
+    },
+    {
+      "path": ".agents/skills/receiving-code-review/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438",
+      "generated_hash": "091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.receiving-code-review"
+      ]
+    },
+    {
+      "path": ".agents/skills/requesting-code-review/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "d71cc01ba56d2325cf8af5f7c11837819b63ecd57de0bfdb812f7f3ff7751df8",
+      "generated_hash": "d71cc01ba56d2325cf8af5f7c11837819b63ecd57de0bfdb812f7f3ff7751df8",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.requesting-code-review"
+      ]
+    },
+    {
+      "path": ".agents/skills/requesting-code-review/code-reviewer.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "5eca5fcfd48a50e0a526ce5ffd64bf625d6b81bb46d11795274dae451fe6ffd4",
+      "generated_hash": "5eca5fcfd48a50e0a526ce5ffd64bf625d6b81bb46d11795274dae451fe6ffd4",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.requesting-code-review"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "2bcd89e97777cdb705914424e39c97d5db524c8eb4eafac8120778a07774f0ec",
+      "generated_hash": "2bcd89e97777cdb705914424e39c97d5db524c8eb4eafac8120778a07774f0ec",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/agents/openai.yaml",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "9527de0110541c45712319025155aeab8dc7d77c6ed6e5e83271bab1851ab939",
+      "generated_hash": "9527de0110541c45712319025155aeab8dc7d77c6ed6e5e83271bab1851ab939",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/domain.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "edc6d6131fdffc4b7135704f5262124fc43355c95f61b7399dc5a4db643e28ca",
+      "generated_hash": "edc6d6131fdffc4b7135704f5262124fc43355c95f61b7399dc5a4db643e28ca",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/issue-tracker-github.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "afd6852a80185217bd28aa5cbe456bef1e85be25be7bd1fba382d5b8ee428325",
+      "generated_hash": "afd6852a80185217bd28aa5cbe456bef1e85be25be7bd1fba382d5b8ee428325",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "ea175f73d193b3f55819c0ed9bbccf6ee0e70ad8f928e3d7607596c53380acd6",
+      "generated_hash": "ea175f73d193b3f55819c0ed9bbccf6ee0e70ad8f928e3d7607596c53380acd6",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/issue-tracker-local.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e",
+      "generated_hash": "7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/setup-matt-pocock-skills/triage-labels.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d",
+      "generated_hash": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.setup"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "8dd1b8e698edec3700c6d89517dbe96febd3bacd3f6ea21c1a3569c62ea104b5",
+      "generated_hash": "8dd1b8e698edec3700c6d89517dbe96febd3bacd3f6ea21c1a3569c62ea104b5",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/implementer-prompt.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "81dd9d5a3fb0b09b96b5829f03b9796842f3199ef7591d1ba1c2db2a515f64d0",
+      "generated_hash": "81dd9d5a3fb0b09b96b5829f03b9796842f3199ef7591d1ba1c2db2a515f64d0",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/re-review-prompt.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "db0d5849478bc79cbde97b9b2cf0e58b50be8b8ed18464b0252c2bf27b6440a6",
+      "generated_hash": "db0d5849478bc79cbde97b9b2cf0e58b50be8b8ed18464b0252c2bf27b6440a6",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/scripts/review-package",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "fac3d4bd7f94369e8037b9ead2a8a502dca6ab333902b560b9455dbb3c450ebe",
+      "generated_hash": "fac3d4bd7f94369e8037b9ead2a8a502dca6ab333902b560b9455dbb3c450ebe",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/scripts/sdd-workspace",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "95a09d9d3983ad1aafd093ca72b4587946dea885c6e302caa02a779a2f911c31",
+      "generated_hash": "95a09d9d3983ad1aafd093ca72b4587946dea885c6e302caa02a779a2f911c31",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/scripts/task-brief",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "d6954ef7841c7da3d77373e6ff5118b3f2f2e998606fd95d33e6527851bce044",
+      "generated_hash": "d6954ef7841c7da3d77373e6ff5118b3f2f2e998606fd95d33e6527851bce044",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/subagent-driven-development/task-reviewer-prompt.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "eea23e33ec570c3041f40e9569fa711d61b8029f9eecf908345138aa1c6e61ab",
+      "generated_hash": "eea23e33ec570c3041f40e9569fa711d61b8029f9eecf908345138aa1c6e61ab",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.subagent-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/CREATION-LOG.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+      "generated_hash": "c24733a5b1821bd6bed1fc950261f0b9f4e90097e0bbb96459d8179713730789",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "808fc5717aa88ad65efff312b11c186294d3e6ee301afb584e2f86599b137787",
+      "generated_hash": "808fc5717aa88ad65efff312b11c186294d3e6ee301afb584e2f86599b137787",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/condition-based-waiting-example.ts",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+      "generated_hash": "40ae5ebe497fdf310200e43fe986552546d0a22837c0d39e855db1cfd33eb88e",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/condition-based-waiting.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+      "generated_hash": "e89fec8400d6cd50f43407cec9fab50976ba4d55d0ec2eb51c0bd68036b54c26",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/defense-in-depth.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+      "generated_hash": "1e175fb86fc357e58c6aebf5441e481e1b7868b4380c0456b63a17eefbd18ba7",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/find-polluter.sh",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+      "generated_hash": "dd7b8f13c4cc2a24b33ff87b18da9248f3e1c80a085c3316224f69ff0fa5c43c",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/root-cause-tracing.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "6b0622269e098ca1399e123e553fd385f0b6412d88ef0e9c4f5a8ea9cf1cec7b",
+      "generated_hash": "6b0622269e098ca1399e123e553fd385f0b6412d88ef0e9c4f5a8ea9cf1cec7b",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-academic.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+      "generated_hash": "fe2ba480d78ac0d686dc025f41c2a32a43d642bf533f91b0c6053a04d35d6486",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-pressure-1.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+      "generated_hash": "0b6a915db0054577819834c79be9eb614e97bddba10d73768e1fbe91cfed048a",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-pressure-2.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+      "generated_hash": "b2030aeffba07050e8ad573ddf87486457c4a016a786bb326235bebd856f2016",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/systematic-debugging/test-pressure-3.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+      "generated_hash": "96b50a52e2c7989c9cf20fb752c47c1e9a3a70dc362f8f7989f8f5b64dac7708",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.systematic-debugging"
+      ]
+    },
+    {
+      "path": ".agents/skills/test-driven-development/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "bf1b8216e523851a411e91d429a7c1c2a173e79d88957bc78e348218d50edd54",
+      "generated_hash": "bf1b8216e523851a411e91d429a7c1c2a173e79d88957bc78e348218d50edd54",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.test-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/test-driven-development/writing-good-tests.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+      "generated_hash": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.test-driven-development"
+      ]
+    },
+    {
+      "path": ".agents/skills/to-tickets/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "5c9fba69845c2519b9b35b9af42ae5142c21f8ca15ac2123dc2722002c8058ae",
+      "generated_hash": "5c9fba69845c2519b9b35b9af42ae5142c21f8ca15ac2123dc2722002c8058ae",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.to-tickets"
+      ]
+    },
+    {
+      "path": ".agents/skills/to-tickets/agents/openai.yaml",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "21bc6215fffcd7614e9f772bb1760e87cc5fc7dcc707e7d282bc9414267a6090",
+      "generated_hash": "21bc6215fffcd7614e9f772bb1760e87cc5fc7dcc707e7d282bc9414267a6090",
+      "producer": "matt",
+      "capability_ids": [
+        "matt.to-tickets"
+      ]
+    },
+    {
+      "path": ".agents/skills/using-git-worktrees/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "8cfb86f121269e8f7f12361e6795c4f6738828340e28964c9229d365666c9edd",
+      "generated_hash": "8cfb86f121269e8f7f12361e6795c4f6738828340e28964c9229d365666c9edd",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.using-git-worktrees"
+      ]
+    },
+    {
+      "path": ".agents/skills/verification-before-completion/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+      "generated_hash": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.verification-before-completion"
+      ]
+    },
+    {
+      "path": ".agents/skills/writing-plans/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "48508f44bbfd7d24b029fbf3a314f3cd14c9615599059366e922f47b8dc08cf2",
+      "generated_hash": "48508f44bbfd7d24b029fbf3a314f3cd14c9615599059366e922f47b8dc08cf2",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.writing-plans"
+      ]
+    },
+    {
+      "path": ".agents/skills/writing-plans/plan-document-reviewer-prompt.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "aa728b96aad603c8be28875a4305637f6c984aa81ffcadcb13e743202fa2a0c7",
+      "generated_hash": "aa728b96aad603c8be28875a4305637f6c984aa81ffcadcb13e743202fa2a0c7",
+      "producer": "superpowers",
+      "capability_ids": [
+        "superpowers.writing-plans"
+      ]
+    },
+    {
+      "path": ".codex/ges/engineering-stack.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "41eaeaf53689e8d4e8dd5b6648bde714c2e233c822b532d2c7acf3b30d934852",
+      "generated_hash": "41eaeaf53689e8d4e8dd5b6648bde714c2e233c822b532d2c7acf3b30d934852",
+      "producer": "ges",
+      "capability_ids": []
+    },
+    {
+      "path": ".cursor/ges/engineering-stack.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "41eaeaf53689e8d4e8dd5b6648bde714c2e233c822b532d2c7acf3b30d934852",
+      "generated_hash": "41eaeaf53689e8d4e8dd5b6648bde714c2e233c822b532d2c7acf3b30d934852",
+      "producer": "ges",
+      "capability_ids": []
+    },
+    {
+      "path": ".cursor/skills/speckit-clarify/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "fef6b84af57d8a4ee9b48aa1a855543dbed344dcdef6033e2355282189d49100",
+      "generated_hash": "fef6b84af57d8a4ee9b48aa1a855543dbed344dcdef6033e2355282189d49100",
+      "producer": "spec-kit",
+      "capability_ids": [
+        "speckit.clarify"
+      ]
+    },
+    {
+      "path": ".cursor/skills/speckit-constitution/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "aae2c81cfc9183359ba5cf0f0c8d15cc0d92b3faba038b0b9e3071a2583dda1e",
+      "generated_hash": "aae2c81cfc9183359ba5cf0f0c8d15cc0d92b3faba038b0b9e3071a2583dda1e",
+      "producer": "spec-kit",
+      "capability_ids": [
+        "speckit.constitution"
+      ]
+    },
+    {
+      "path": ".cursor/skills/speckit-plan/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "6b2ddab3f16d43fb5f11ae67a1a3a4b6eddd401c0bf9b346f6c6e3f7e642f2e2",
+      "generated_hash": "6b2ddab3f16d43fb5f11ae67a1a3a4b6eddd401c0bf9b346f6c6e3f7e642f2e2",
+      "producer": "spec-kit",
+      "capability_ids": [
+        "speckit.plan"
+      ]
+    },
+    {
+      "path": ".cursor/skills/speckit-specify/SKILL.md",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "07cd9d7f13c04243a8372f8f40e320c60e14550814fc092d9b5f491c9b83f0f8",
+      "generated_hash": "07cd9d7f13c04243a8372f8f40e320c60e14550814fc092d9b5f491c9b83f0f8",
+      "producer": "spec-kit",
+      "capability_ids": [
+        "speckit.specify"
+      ]
+    },
+    {
+      "path": ".specify/scripts/python/clarify.py",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "2d9f0716fc672acc3c0bad2b365b7332a0f2a379678e8259c5b0dbd119ebeef8",
+      "generated_hash": "2d9f0716fc672acc3c0bad2b365b7332a0f2a379678e8259c5b0dbd119ebeef8",
+      "producer": "spec-kit",
+      "capability_ids": []
+    },
+    {
+      "path": ".specify/scripts/python/constitution.py",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "6d46a954d6262e50ecafed6595b453157eca003df39b88118b27d88645ba38ce",
+      "generated_hash": "6d46a954d6262e50ecafed6595b453157eca003df39b88118b27d88645ba38ce",
+      "producer": "spec-kit",
+      "capability_ids": []
+    },
+    {
+      "path": ".specify/scripts/python/plan.py",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "bbc05a468be2aec16ac0370729f9cf79d97e2620591a44832ac85cd3edfd527f",
+      "generated_hash": "bbc05a468be2aec16ac0370729f9cf79d97e2620591a44832ac85cd3edfd527f",
+      "producer": "spec-kit",
+      "capability_ids": []
+    },
+    {
+      "path": ".specify/scripts/python/specify.py",
+      "ownership_type": "FILE",
+      "selector": null,
+      "last_applied_hash": "b0741dd48b0699dc8361aee0bafacc731e41b60847386797595aafdeaa80bc0c",
+      "generated_hash": "b0741dd48b0699dc8361aee0bafacc731e41b60847386797595aafdeaa80bc0c",
+      "producer": "spec-kit",
+      "capability_ids": []
+    },
+    {
+      "path": "AGENTS.md",
+      "ownership_type": "SECTION",
+      "selector": {
+        "begin": "<!-- ges:v6:engineering-stack:begin -->",
+        "end": "<!-- ges:v6:engineering-stack:end -->"
+      },
+      "last_applied_hash": "1cbadf9a5b8b0e43a9dfa4a97f93d40fcc9646966d40a1b3ee0d19e1d351925d",
+      "generated_hash": "1cbadf9a5b8b0e43a9dfa4a97f93d40fcc9646966d40a1b3ee0d19e1d351925d",
+      "producer": "ges",
+      "capability_ids": []
+    }
+  ],
+  "source_commits": {
+    "matt": {
+      "repo": "https://github.com/mattpocock/skills.git",
+      "commit_sha": "959a8e9f1edc3adbe2f7e3054bb6fbefa6696260",
+      "content_identity": "1c5c3a0b51f076e352b1e9559709ca0bf942ff2c0a83dc8c5961ec041e1c3b4e"
+    },
+    "spec-kit": {
+      "repo": "https://github.com/github/spec-kit.git",
+      "commit_sha": "1d5106f59e1b148ee23ab136638932dd790ff1b6",
+      "content_identity": "fc0fc980e82988d34a6b41dad56496f96424dbde14681e4291ff1e4986ba9285"
+    },
+    "superpowers": {
+      "repo": "https://github.com/obra/superpowers.git",
+      "commit_sha": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+      "content_identity": "fc56ed1335ce4fdf7148b5b476c0f78f25e1f3c13152f3693fde6efd21c340ff"
+    }
+  },
+  "capability_set": [
+    "matt.codebase-design",
+    "matt.domain-modeling",
+    "matt.grill-with-docs",
+    "matt.grilling",
+    "matt.setup",
+    "matt.to-tickets",
+    "speckit.clarify",
+    "speckit.constitution",
+    "speckit.plan",
+    "speckit.specify",
+    "superpowers.execution",
+    "superpowers.finishing-a-development-branch",
+    "superpowers.receiving-code-review",
+    "superpowers.requesting-code-review",
+    "superpowers.subagent-driven-development",
+    "superpowers.systematic-debugging",
+    "superpowers.test-driven-development",
+    "superpowers.using-git-worktrees",
+    "superpowers.verification-before-completion",
+    "superpowers.writing-plans"
+  ]
+}

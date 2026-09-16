@@ -1,0 +1,19 @@
+schema: ges.work.v1
+id: WI-GES-A2-GOLDEN
+kind: FEATURE
+title: Alpha.2 Golden demo work
+status: OPEN
+owner: loudon84
+risk: LOW
+policy: default-v1
+artifacts:
+- id: ART-SPEC
+  type: SPEC
+  pointer: repo://prd/gov_feature.md
+  digest: sha256:c4406ea3e5d52dc5c6c9b7b2a8e726ad1df71d39bdeb7371031023d4f98c220f
+- id: ART-PLAN
+  type: PLAN
+  pointer: repo://plans/UC-PROFILE-GOV.plan.md
+  digest: sha256:7c30085cca9da56d3a25db26bc0237f9ae575e9c341a15f0c4e45ddbaad97201
+created_at: '2026-09-16T10:33:35.516312+00:00'
+updated_at: '2026-09-16T10:33:36.396449+00:00'

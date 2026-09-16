@@ -1,0 +1,27 @@
+schema: ges.policy.v1
+id: default-v1
+intake:
+  require_owner: true
+  required_artifacts:
+  - SPEC
+  - PLAN
+merge:
+  supported_risks:
+  - LOW
+  - MEDIUM
+  pr:
+    require_open: true
+    require_not_draft: true
+    require_work_marker: true
+    work_marker: 'GES-Work: {work_id}'
+  local:
+    require_head_equals_pr_head: true
+    require_clean_tracked_tree: true
+  review:
+    require_decision: APPROVED
+  checks:
+    min_successful: 1
+    allow_pending: false
+    allow_failed: false
+    allow_cancelled: false
+    allow_skipped_as_success: false

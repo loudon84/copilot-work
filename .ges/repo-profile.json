@@ -1,0 +1,66 @@
+{
+  "schema": "ges.repo-profile.v2",
+  "repository_lifecycle": "brownfield",
+  "layout": "single",
+  "kind": "brownfield",
+  "repository_kind": "brownfield",
+  "agents": [
+    "cursor",
+    "codex"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "spec_kit": true,
+  "legacy_ges": false,
+  "ci": [
+    "github-actions"
+  ],
+  "package_managers": [
+    "npm"
+  ],
+  "frameworks": [
+    "react"
+  ],
+  "existing": {
+    "AGENTS.md": true,
+    "CLAUDE.md": true,
+    ".agents": false,
+    ".cursor": true,
+    ".codex": true,
+    ".specify": true,
+    ".smc": false,
+    "CONTEXT.md": false,
+    "CONTEXT-MAP.md": false,
+    "docs/adr": false
+  },
+  "source_roots": [
+    "src",
+    "packages"
+  ],
+  "scripts": {
+    "test": [
+      "package.json"
+    ],
+    "build": [
+      "package.json"
+    ],
+    "lint": [
+      "package.json"
+    ]
+  },
+  "tsconfig_evidence": [
+    "packages/runtime-client-ts/tsconfig.json",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "tsconfig.web.json"
+  ],
+  "analyzer_version": "6.0.0-alpha.2",
+  "analyzed_at": "2026-09-16T10:32:47.411994+00:00",
+  "git": {
+    "repository": true,
+    "head": "737409b14e7499723db25fcb0414fa3e7026a86f",
+    "remote": "git@github.com:loudon84/copilot-work.git"
+  },
+  "llm_token_usage": 0
+}
